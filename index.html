@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ned | Sales Pipeline Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2a2d3a;
+    --accent: #6366f1;
+    --accent2: #22d3ee;
+    --accent3: #f59e0b;
+    --accent4: #10b981;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --danger: #f43f5e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-area h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .logo-area p {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .header-meta {
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .header-meta .badge {
+    display: inline-block;
+    background: rgba(99,102,241,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(99,102,241,0.3);
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  /* KPI Row */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .kpi-card.indigo::before { background: var(--accent); }
+  .kpi-card.cyan::before   { background: var(--accent2); }
+  .kpi-card.amber::before  { background: var(--accent3); }
+  .kpi-card.green::before  { background: var(--accent4); }
+  .kpi-card.rose::before   { background: var(--danger); }
+
+  .kpi-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .kpi-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  .kpi-sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* Chart grid */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .chart-card.full { grid-column: 1 / -1; }
+
+  .chart-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .chart-subtitle {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+    opacity: 0.7;
+  }
+
+  canvas { max-height: 260px; }
+
+  /* Stage funnel table */
+  .funnel-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 4px;
+  }
+
+  .funnel-table th {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .funnel-table th:not(:first-child) { text-align: right; }
+
+  .funnel-table td {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+  }
+
+  .funnel-table td:not(:first-child) { text-align: right; }
+
+  .stage-name { font-weight: 600; }
+
+  .stage-bar-wrap {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+    width: 100%;
+  }
+
+  .stage-bar { height: 100%; border-radius: 3px; }
+
+  .value-text { font-variant-numeric: tabular-nums; }
+
+  .pct-badge {
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+
+  footer {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .note {
+    background: rgba(99,102,241,0.08);
+    border: 1px solid rgba(99,102,241,0.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .chart-card.full { grid-column: auto; }
+    body { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<script src="data.js"></script>
+<script>
+// Helpers
+function fmt$(n) {
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return '$' + (n/1e3).toFixed(0) + 'K';
+  return '$' + n;
+}
+
+const STAGE_COLORS = {
+  'Qualify':     '#6366f1',
+  'Explore':     '#8b5cf6',
+  'Active':      '#22d3ee',
+  'Propose':     '#f59e0b',
+  'Negotiate':   '#10b981',
+  'Demo Config': '#f43f5e'
+};
+
+const D = window.DASHBOARD_DATA;
+const { summary, pipelineByStage, meetingsPerMonth, pipelineGrowth } = D;
+const totalPipeline = pipelineByStage.reduce((s, x) => s + x.value, 0);
+</script>
+
+<header>
+  <div class="logo-area">
+    <h1>Sales Pipeline Dashboard</h1>
+    <p>Pre-sale accounts · Fiscal Year <span id="fy"></span></p>
+  </div>
+  <div class="header-meta">
+    <div class="badge">Live Data</div>
+    <div id="updated"></div>
+  </div>
+</header>
+
+<div class="note">
+  ℹ️ <strong>Pre-sale definition:</strong> Accounts with at least one open opportunity in an active pipeline stage
+  (Qualify, Explore, Active, Propose, Negotiate, Demo Config). Account Type field is sparsely populated in this org.
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid">
+  <div class="kpi-card indigo">
+    <div class="kpi-label">Open Pipeline Value</div>
+    <div class="kpi-value" id="kpi-pipeline"></div>
+    <div class="kpi-sub" id="kpi-pipeline-sub"></div>
+  </div>
+  <div class="kpi-card cyan">
+    <div class="kpi-label">Pre-Sale Accounts</div>
+    <div class="kpi-value" id="kpi-accounts"></div>
+    <div class="kpi-sub">with active opportunities</div>
+  </div>
+  <div class="kpi-card amber">
+    <div class="kpi-label">YTD Meetings</div>
+    <div class="kpi-value" id="kpi-meetings"></div>
+    <div class="kpi-sub" id="kpi-meetings-sub"></div>
+  </div>
+  <div class="kpi-card green">
+    <div class="kpi-label">Open Opportunities</div>
+    <div class="kpi-value" id="kpi-opps"></div>
+    <div class="kpi-sub">across all active stages</div>
+  </div>
+  <div class="kpi-card rose">
+    <div class="kpi-label">Avg Deal Size</div>
+    <div class="kpi-value" id="kpi-deal-size"></div>
+    <div class="kpi-sub">open opps with amount</div>
+  </div>
+</div>
+
+<!-- Charts row 1 -->
+<div class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-title">Meetings / Month</div>
+    <div class="chart-subtitle">Pre-sale accounts · FY2026</div>
+    <canvas id="meetings-chart"></canvas>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Pipeline by Stage</div>
+    <div class="chart-subtitle">Current open opportunity value</div>
+    <canvas id="stage-value-chart"></canvas>
+  </div>
+
+  <div class="chart-card full">
+    <div class="chart-title">Pipeline Growth</div>
+    <div class="chart-subtitle">New opportunities created per month · count &amp; value</div>
+    <canvas id="growth-chart"></canvas>
+  </div>
+</div>
+
+<!-- Stage progression table -->
+<div class="chart-card">
+  <div class="chart-title">Stage Progression</div>
+  <div class="chart-subtitle">Open opportunity distribution across pipeline stages</div>
+  <table class="funnel-table">
+    <thead>
+      <tr>
+        <th>Stage</th>
+        <th>Deals</th>
+        <th>Pipeline Value</th>
+        <th>% of Total</th>
+        <th style="min-width:160px">Share</th>
+      </tr>
+    </thead>
+    <tbody id="funnel-body"></tbody>
+  </table>
+</div>
+
+<footer>
+  <span>Data source: Salesforce · Pre-sale accounts only</span>
+  <span id="footer-updated"></span>
+</footer>
+
+<script>
+// Populate KPIs
+document.getElementById('fy').textContent = D.fiscalYear;
+document.getElementById('updated').textContent = 'Updated ' + D.generated;
+document.getElementById('footer-updated').textContent = 'Last refreshed: ' + D.generated;
+
+document.getElementById('kpi-pipeline').textContent = fmt$(summary.totalOpenPipelineValue);
+document.getElementById('kpi-pipeline-sub').textContent = pipelineByStage.length + ' active stages';
+document.getElementById('kpi-accounts').textContent = summary.presaleAccounts;
+document.getElementById('kpi-meetings').textContent = summary.ytdMeetings;
+document.getElementById('kpi-meetings-sub').textContent = 'avg ' + summary.avgMonthlyMeetings.toFixed(1) + '/month';
+document.getElementById('kpi-opps').textContent = summary.totalOpenOpportunities;
+const openWithAmt = pipelineByStage.reduce((s, x) => s + x.count, 0);
+const avgDeal = openWithAmt > 0 ? totalPipeline / openWithAmt : 0;
+document.getElementById('kpi-deal-size').textContent = fmt$(Math.round(avgDeal));
+
+// Chart defaults
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = '#2a2d3a';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
+// 1. Meetings per month
+new Chart(document.getElementById('meetings-chart'), {
+  type: 'bar',
+  data: {
+    labels: meetingsPerMonth.map(x => x.month),
+    datasets: [{
+      label: 'Meetings',
+      data: meetingsPerMonth.map(x => x.meetings),
+      backgroundColor: meetingsPerMonth.map((x, i) =>
+        i < meetingsPerMonth.length - 2 ? 'rgba(99,102,241,0.8)' : 'rgba(99,102,241,0.35)'
+      ),
+      borderRadius: 6,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.raw} meetings` } }
+    },
+    scales: {
+      y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// 2. Pipeline by stage (doughnut)
+const stageLabels = pipelineByStage.map(x => x.stage);
+const stageColors = stageLabels.map(s => STAGE_COLORS[s] || '#64748b');
+new Chart(document.getElementById('stage-value-chart'), {
+  type: 'doughnut',
+  data: {
+    labels: stageLabels,
+    datasets: [{
+      data: pipelineByStage.map(x => x.value),
+      backgroundColor: stageColors,
+      borderWidth: 2,
+      borderColor: '#1a1d27',
+      hoverOffset: 8
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '62%',
+    plugins: {
+      legend: {
+        position: 'right',
+        labels: { boxWidth: 12, padding: 14, font: { size: 11 } }
+      },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.label}: ${fmt$(ctx.raw)} (${ctx.parsed.toFixed(0)})`
+        }
+      }
+    }
+  }
+});
+
+// 3. Pipeline growth (combo — bars = value, line = count)
+new Chart(document.getElementById('growth-chart'), {
+  type: 'bar',
+  data: {
+    labels: pipelineGrowth.map(x => x.month),
+    datasets: [
+      {
+        label: 'Pipeline Value Added',
+        data: pipelineGrowth.map(x => x.value),
+        backgroundColor: 'rgba(34,211,238,0.6)',
+        borderRadius: 6,
+        yAxisID: 'y'
+      },
+      {
+        label: 'New Deals',
+        data: pipelineGrowth.map(x => x.count),
+        type: 'line',
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245,158,11,0.15)',
+        pointBackgroundColor: '#f59e0b',
+        pointRadius: 5,
+        tension: 0.3,
+        fill: false,
+        yAxisID: 'y2'
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { labels: { boxWidth: 12, padding: 16, font: { size: 11 } } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ctx.datasetIndex === 0
+            ? ` Value: ${fmt$(ctx.raw)}`
+            : ` New deals: ${ctx.raw}`
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { callback: v => fmt$(v) }
+      },
+      y2: {
+        position: 'right',
+        beginAtZero: true,
+        grid: { display: false },
+        ticks: { stepSize: 1 }
+      },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// 4. Funnel table
+const tbody = document.getElementById('funnel-body');
+const maxVal = Math.max(...pipelineByStage.map(x => x.value));
+pipelineByStage.forEach(row => {
+  const pct = ((row.value / totalPipeline) * 100).toFixed(1);
+  const barPct = ((row.value / maxVal) * 100).toFixed(1);
+  const color = STAGE_COLORS[row.stage] || '#64748b';
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><span class="stage-name">${row.stage}</span></td>
+    <td class="value-text">${row.count}</td>
+    <td class="value-text">${fmt$(row.value)}</td>
+    <td>
+      <span class="pct-badge" style="background:${color}22;color:${color}">${pct}%</span>
+    </td>
+    <td>
+      <div class="stage-bar-wrap">
+        <div class="stage-bar" style="width:${barPct}%;background:${color}"></div>
+      </div>
+    </td>
+  `;
+  tbody.appendChild(tr);
+});
+// Totals row
+const totTr = document.createElement('tr');
+totTr.style.fontWeight = '700';
+totTr.innerHTML = `
+  <td>Total</td>
+  <td class="value-text">${pipelineByStage.reduce((s,x)=>s+x.count,0)}</td>
+  <td class="value-text">${fmt$(totalPipeline)}</td>
+  <td></td>
+  <td></td>
+`;
+tbody.appendChild(totTr);
+</script>
+</body>
+</html>
