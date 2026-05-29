@@ -3,971 +3,396 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ned | Sales Pipeline Dashboard</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<title>Pre-Sale Pipeline Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-  :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --border: #2a2d3a;
-    --accent: #6366f1;
-    --accent2: #22d3ee;
-    --accent3: #f59e0b;
-    --accent4: #10b981;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --danger: #f43f5e;
-  }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f4f6f9;
+    color: #1a1a2e;
     min-height: 100vh;
-    padding: 24px;
   }
 
   header {
+    background: #1a1a2e;
+    color: #fff;
+    padding: 18px 32px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 20px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border);
   }
+  header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: 0.01em; }
+  header .meta { font-size: 0.78rem; color: #a0aec0; }
 
-  .logo-area h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
-  .logo-area p  { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 28px 24px; }
 
-  .header-meta { text-align: right; font-size: 0.75rem; color: var(--muted); }
-  .header-meta .badge {
-    display: inline-block;
-    background: rgba(99,102,241,0.15);
-    color: var(--accent);
-    border: 1px solid rgba(99,102,241,0.3);
-    padding: 3px 10px; border-radius: 999px;
-    font-weight: 600; margin-bottom: 4px;
-  }
-
-  /* ── Owner filter bar ── */
-  .filter-bar {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 18px;
-    margin-bottom: 22px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .filter-label {
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-    white-space: nowrap;
-    margin-right: 4px;
-  }
-
-  .owner-chips { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; }
-
-  .chip {
-    padding: 5px 14px;
-    border-radius: 999px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    cursor: pointer;
-    border: 1.5px solid var(--border);
-    background: transparent;
-    color: var(--muted);
-    transition: all 0.15s;
-    user-select: none;
-  }
-
-  .chip:hover { border-color: var(--accent); color: var(--text); }
-
-  .chip.active {
-    border-color: transparent;
-    color: #fff;
-  }
-
-  .chip-all.active { background: var(--accent); }
-
-  .filter-summary {
-    font-size: 0.75rem;
-    color: var(--muted);
-    white-space: nowrap;
-    margin-left: auto;
-  }
-
-  /* ── KPIs ── */
-  .kpi-grid {
+  /* KPI row */
+  .kpi-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
+  }
+  .kpi {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px 22px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.07);
+  }
+  .kpi .label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #718096;
+    margin-bottom: 8px;
+  }
+  .kpi .value {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1;
+  }
+  .kpi .sub {
+    font-size: 0.75rem;
+    color: #a0aec0;
+    margin-top: 4px;
   }
 
-  .kpi-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .kpi-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-  }
-
-  .kpi-card.indigo::before { background: var(--accent); }
-  .kpi-card.cyan::before   { background: var(--accent2); }
-  .kpi-card.amber::before  { background: var(--accent3); }
-  .kpi-card.green::before  { background: var(--accent4); }
-  .kpi-card.rose::before   { background: var(--danger); }
-
-  .kpi-label {
-    font-size: 0.72rem; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.08em;
-    color: var(--muted); margin-bottom: 8px;
-  }
-
-  .kpi-value { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
-  .kpi-sub   { font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
-
-  /* ── Charts ── */
+  /* Chart grid */
   .charts-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
-
   .chart-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
+    background: #fff;
+    border-radius: 10px;
+    padding: 22px 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.07);
   }
-
   .chart-card.full { grid-column: 1 / -1; }
-
-  .chart-title {
-    font-size: 0.85rem; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.06em;
-    color: var(--muted); margin-bottom: 4px;
+  .chart-card h2 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #718096;
+    margin-bottom: 18px;
   }
+  .chart-wrap { position: relative; height: 240px; }
+  .chart-card.full .chart-wrap { height: 220px; }
 
-  .chart-subtitle {
-    font-size: 0.8rem; color: var(--muted);
-    margin-bottom: 20px; opacity: 0.7;
+  /* Stage table */
+  .table-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 22px 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.07);
+    margin-bottom: 20px;
   }
-
-  canvas { max-height: 260px; }
-
-  /* ── Stage table ── */
-  .funnel-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
-
-  .funnel-table th {
-    font-size: 0.72rem; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--muted);
-    font-weight: 600; padding: 8px 12px;
-    text-align: left; border-bottom: 1px solid var(--border);
+  .table-card h2 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #718096;
+    margin-bottom: 16px;
   }
-
-  .funnel-table th:not(:first-child) { text-align: right; }
-
-  .funnel-table td {
-    padding: 10px 12px; font-size: 0.85rem;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  thead th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #a0aec0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  thead th:not(:first-child) { text-align: right; }
+  tbody tr:hover { background: #f7fafc; }
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f0f4f8;
+    color: #2d3748;
+  }
+  tbody td:not(:first-child) { text-align: right; }
+  .stage-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
     vertical-align: middle;
   }
-
-  .funnel-table td:not(:first-child) { text-align: right; }
-  .funnel-table .total-row td { font-weight: 700; border-top: 1px solid var(--border); border-bottom: none; }
-
-  .stage-name { font-weight: 600; }
-  .stage-bar-wrap { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 4px; }
-  .stage-bar { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
-  .value-text { font-variant-numeric: tabular-nums; }
-
-  .pct-badge {
-    font-size: 0.7rem; padding: 2px 7px;
-    border-radius: 999px; font-weight: 600;
+  tfoot td {
+    padding: 10px 12px;
+    font-weight: 600;
+    color: #1a1a2e;
+    border-top: 2px solid #e2e8f0;
+    font-size: 0.875rem;
   }
+  tfoot td:not(:first-child) { text-align: right; }
 
   footer {
-    margin-top: 32px; padding-top: 16px;
-    border-top: 1px solid var(--border);
-    font-size: 0.72rem; color: var(--muted);
-    display: flex; justify-content: space-between; align-items: center;
+    text-align: center;
+    font-size: 0.72rem;
+    color: #a0aec0;
+    padding: 20px 0 32px;
   }
 
-  /* ── Clickable hint ── */
-  .chart-card[data-clickable] canvas { cursor: pointer; }
-  .click-hint {
-    font-size: 0.68rem; color: var(--muted); opacity: 0.6;
-    margin-top: -14px; margin-bottom: 12px;
-  }
-  .funnel-table tbody tr:not(.total-row) {
-    cursor: pointer;
-    transition: background 0.12s;
-  }
-  .funnel-table tbody tr:not(.total-row):hover { background: rgba(255,255,255,0.03); }
-
-  /* ── Drill-down drawer ── */
-  .drawer-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.55);
-    z-index: 1000;
-    backdrop-filter: blur(2px);
-  }
-  .drawer-overlay.open { display: block; }
-
-  .drawer {
-    position: fixed;
-    top: 0; right: 0; bottom: 0;
-    width: min(640px, 100vw);
-    background: #1a1d27;
-    border-left: 1px solid var(--border);
-    display: flex; flex-direction: column;
-    transform: translateX(100%);
-    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-    z-index: 1001;
-  }
-  .drawer-overlay.open .drawer { transform: translateX(0); }
-
-  .drawer-header {
-    padding: 22px 24px 18px;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: flex-start; justify-content: space-between;
-    gap: 16px; flex-shrink: 0;
-  }
-  .drawer-title  { font-size: 1rem; font-weight: 700; }
-  .drawer-sub    { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
-  .drawer-count  { font-size: 0.72rem; color: var(--accent); font-weight: 600;
-                   background: rgba(99,102,241,0.12); padding: 3px 9px; border-radius: 999px;
-                   margin-top: 4px; display: inline-block; }
-  .drawer-close  {
-    background: none; border: 1px solid var(--border); color: var(--muted);
-    width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
-    font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; transition: all 0.12s;
-  }
-  .drawer-close:hover { border-color: var(--accent); color: var(--text); }
-
-  .drawer-body { overflow-y: auto; flex: 1; padding: 0 24px 24px; }
-
-  .drawer-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 0.82rem; }
-  .drawer-table th {
-    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em;
-    color: var(--muted); font-weight: 600; padding: 8px 10px;
-    text-align: left; border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; background: #1a1d27;
-  }
-  .drawer-table th.right { text-align: right; }
-  .drawer-table td {
-    padding: 9px 10px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    vertical-align: middle;
-  }
-  .drawer-table td.right { text-align: right; font-variant-numeric: tabular-nums; }
-  .drawer-table tr:last-child td { border-bottom: none; }
-  .drawer-empty { text-align: center; color: var(--muted); padding: 40px 0; font-size: 0.85rem; }
-
-  .stage-pill {
-    display: inline-block; padding: 2px 9px; border-radius: 999px;
-    font-size: 0.7rem; font-weight: 600;
-  }
-
-  @media (max-width: 768px) {
+  @media (max-width: 680px) {
     .charts-grid { grid-template-columns: 1fr; }
-    .chart-card.full { grid-column: auto; }
-    body { padding: 16px; }
-    .filter-bar { flex-direction: column; align-items: flex-start; }
-    .filter-summary { margin-left: 0; }
-    .drawer { width: 100vw; border-left: none; border-top: 1px solid var(--border); }
+    .chart-card.full { grid-column: 1; }
   }
 </style>
 </head>
 <body>
+
+<header>
+  <h1>Pre-Sale Pipeline Dashboard</h1>
+  <span class="meta" id="hdr-meta">Loading…</span>
+</header>
+
+<div class="container">
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="label">Open Pipeline</div>
+      <div class="value" id="kpi-pipeline">—</div>
+      <div class="sub" id="kpi-pipeline-sub"></div>
+    </div>
+    <div class="kpi">
+      <div class="label">Open Deals</div>
+      <div class="value" id="kpi-deals">—</div>
+      <div class="sub">active opportunities</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Pre-Sale Accounts</div>
+      <div class="value" id="kpi-accounts">—</div>
+      <div class="sub">RecordType = Pre Sale</div>
+    </div>
+    <div class="kpi">
+      <div class="label">YTD Meetings</div>
+      <div class="value" id="kpi-meetings">—</div>
+      <div class="sub" id="kpi-meetings-sub"></div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h2>Meetings / Month</h2>
+      <div class="chart-wrap"><canvas id="meetingsChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h2>Pipeline by Stage</h2>
+      <div class="chart-wrap"><canvas id="stageChart"></canvas></div>
+    </div>
+    <div class="chart-card full">
+      <h2>New Pipeline Created per Month</h2>
+      <div class="chart-wrap"><canvas id="growthChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Stage table -->
+  <div class="table-card">
+    <h2>Stage Breakdown</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Stage</th>
+          <th>Deals</th>
+          <th>Pipeline Value</th>
+          <th>Avg Deal Size</th>
+        </tr>
+      </thead>
+      <tbody id="stage-tbody"></tbody>
+      <tfoot id="stage-tfoot"></tfoot>
+    </table>
+  </div>
+</div>
+
+<footer id="footer">—</footer>
+
 <script src="data.js"></script>
 <script>
-// ─────────────────────────────────────────────
-//  Constants
-// ─────────────────────────────────────────────
-const PRESALE_STAGES = new Set(['Qualify','Explore','Active','Propose','Negotiate','Demo Platform Configuration']);
-const STAGE_ORDER    = ['Qualify','Explore','Active','Propose','Negotiate','Demo Platform Configuration'];
-const STAGE_LABELS   = { 'Demo Platform Configuration': 'Demo Config' };
-const STAGE_COLORS   = {
-  'Qualify':                    '#6366f1',
-  'Explore':                    '#8b5cf6',
-  'Active':                     '#22d3ee',
-  'Propose':                    '#f59e0b',
-  'Negotiate':                  '#10b981',
-  'Demo Platform Configuration':'#f43f5e',
-};
+(function () {
+  const D = window.DASHBOARD_DATA;
+  if (!D) { document.body.innerHTML = '<p style="padding:40px;color:red">data.js not loaded.</p>'; return; }
 
-const OWNER_PALETTE = [
-  '#6366f1','#22d3ee','#f59e0b','#10b981','#f43f5e','#a78bfa','#fb923c','#34d399'
-];
+  const S = D.summary;
+  const fmt$ = v => '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v.toLocaleString());
+  const fmtFull$ = v => '$' + Math.round(v).toLocaleString();
 
-function fmt$(n) {
-  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
-  if (n >= 1e3) return '$' + (n/1e3).toFixed(0) + 'K';
-  return '$' + Math.round(n);
-}
+  // Header
+  document.getElementById('hdr-meta').textContent =
+    `FY${D.fiscalYear} · Updated ${D.generated}`;
 
-function monthLabel(ym) {
-  const [y, m] = ym.split('-');
-  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1] + ' ' + y;
-}
+  // KPIs
+  document.getElementById('kpi-pipeline').textContent = fmt$(S.totalOpenPipelineValue);
+  document.getElementById('kpi-pipeline-sub').textContent = fmtFull$(S.totalOpenPipelineValue);
+  document.getElementById('kpi-deals').textContent = S.totalOpenOpportunities.toLocaleString();
+  document.getElementById('kpi-accounts').textContent = S.presaleAccounts.toLocaleString();
+  document.getElementById('kpi-meetings').textContent = S.ytdMeetings.toLocaleString();
+  document.getElementById('kpi-meetings-sub').textContent = `${S.avgMonthlyMeetings} avg / month`;
 
-const D = window.DASHBOARD_DATA;
-const presaleSet = new Set(D.presaleAccountIds);
+  // ── Palette ────────────────────────────────────────────────────────────
+  const STAGE_COLORS = [
+    '#4361ee','#3a0ca3','#7209b7','#f72585','#e85d04','#48cae4'
+  ];
 
-// ─────────────────────────────────────────────
-//  Filter state — Set of active owner names
-//  Empty set = all owners selected
-// ─────────────────────────────────────────────
-let activeOwners = new Set(); // empty = ALL
-
-function isOwnerMatch(ownerName) {
-  return activeOwners.size === 0 || activeOwners.has(ownerName);
-}
-
-// ─────────────────────────────────────────────
-//  Compute all metrics from raw records
-// ─────────────────────────────────────────────
-function computeMetrics() {
-  const opps   = D.opportunities.filter(o => isOwnerMatch(o.ownerName));
-  const events = D.events.filter(e => isOwnerMatch(e.ownerName));
-
-  // Pre-sale account IDs that still have an active opp after filtering
-  const filteredPresaleAccts = new Set(
-    opps.filter(o => PRESALE_STAGES.has(o.stage) && o.accountId).map(o => o.accountId)
-  );
-
-  // 1. Meetings/month — events on pre-sale accounts this FY
-  const meetMap = {};
-  for (const e of events) {
-    if (!filteredPresaleAccts.has(e.accountId)) continue;
-    if (!e.activityDate.startsWith('2026')) continue;
-    const m = e.activityDate.slice(0,7);
-    meetMap[m] = (meetMap[m] || 0) + 1;
-  }
-
-  // 2. Pipeline by stage
-  const stageMap = {};
-  for (const s of STAGE_ORDER) stageMap[s] = { count: 0, value: 0 };
-  for (const o of opps) {
-    if (!PRESALE_STAGES.has(o.stage)) continue;
-    stageMap[o.stage].count++;
-    stageMap[o.stage].value += o.amount || 0;
-  }
-  const pipelineByStage = STAGE_ORDER
-    .filter(s => stageMap[s].count > 0)
-    .map(s => ({ stage: s, label: STAGE_LABELS[s] || s, count: stageMap[s].count, value: stageMap[s].value }));
-
-  // 3. Pipeline growth — new opps per month
-  const growthMap = {};
-  for (const o of opps) {
-    const m = o.createdDate.slice(0,7);
-    if (!m) continue;
-    if (!growthMap[m]) growthMap[m] = { count: 0, value: 0 };
-    growthMap[m].count++;
-    growthMap[m].value += o.amount || 0;
-  }
-
-  // 4. Summary KPIs
-  const openOpps   = opps.filter(o => PRESALE_STAGES.has(o.stage));
-  const totalValue = openOpps.reduce((s, o) => s + (o.amount || 0), 0);
-  const totalOpen  = openOpps.length;
-  const ytdMeet    = Object.values(meetMap).reduce((a,b) => a+b, 0);
-  const months     = Object.keys(meetMap).length || 1;
-
-  return {
-    meetMap, pipelineByStage, growthMap,
-    totalValue, totalOpen, ytdMeet,
-    presaleAccts: filteredPresaleAccts.size,
-    avgMonthly: +(ytdMeet / months).toFixed(1),
-    avgDeal: totalOpen > 0 ? totalValue / totalOpen : 0,
-  };
-}
-
-// ─────────────────────────────────────────────
-//  Chart instances
-// ─────────────────────────────────────────────
-Chart.defaults.color        = '#94a3b8';
-Chart.defaults.borderColor  = '#2a2d3a';
-Chart.defaults.font.family  = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-
-let meetChart, stageChart, growthChart;
-
-function buildMeetChart(meetMap) {
-  const months  = Object.keys(meetMap).sort();
-  const labels  = months.map(monthLabel);
-  const counts  = months.map(m => meetMap[m]);
-  const now     = new Date().toISOString().slice(0,7);
-
-  return new Chart(document.getElementById('meetings-chart'), {
+  // ── Meetings bar ───────────────────────────────────────────────────────
+  const mData = D.meetingsPerMonth;
+  new Chart(document.getElementById('meetingsChart'), {
     type: 'bar',
     data: {
-      labels,
+      labels: mData.map(d => d.month),
       datasets: [{
         label: 'Meetings',
-        data: counts,
-        backgroundColor: months.map(m => m <= now ? 'rgba(99,102,241,0.8)' : 'rgba(99,102,241,0.3)'),
-        borderRadius: 6,
-        borderSkipped: false,
+        data: mData.map(d => d.meetings),
+        backgroundColor: '#4361ee',
+        borderRadius: 4,
+        borderSkipped: false
       }]
     },
     options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.raw} meetings · click to drill in` } }
-      },
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
       scales: {
-        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
-        x: { grid: { display: false } }
-      },
-      onClick(evt, elements) {
-        if (!elements.length) return;
-        const lbl = this.data.labels[elements[0].index];
-        drillMeetings(lbl);
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f0f4f8' } }
       }
     }
   });
-}
 
-function buildStageChart(pipelineByStage) {
-  return new Chart(document.getElementById('stage-value-chart'), {
+  // ── Pipeline donut ─────────────────────────────────────────────────────
+  const pData = D.pipelineByStage;
+  new Chart(document.getElementById('stageChart'), {
     type: 'doughnut',
     data: {
-      labels: pipelineByStage.map(x => x.label),
+      labels: pData.map(d => d.stage),
       datasets: [{
-        data: pipelineByStage.map(x => x.value),
-        backgroundColor: pipelineByStage.map(x => STAGE_COLORS[x.stage] || '#64748b'),
+        data: pData.map(d => d.value),
+        backgroundColor: STAGE_COLORS.slice(0, pData.length),
         borderWidth: 2,
-        borderColor: '#1a1d27',
-        hoverOffset: 8,
+        borderColor: '#fff'
       }]
     },
     options: {
-      responsive: true,
-      cutout: '62%',
+      responsive: true, maintainAspectRatio: false,
+      cutout: '60%',
       plugins: {
-        legend: { position: 'right', labels: { boxWidth: 12, padding: 14, font: { size: 11 } } },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt$(ctx.raw)} · click to drill in` } }
-      },
-      onClick(evt, elements) {
-        if (!elements.length) return;
-        const idx      = elements[0].index;
-        const stageLbl = this.data.labels[idx];
-        // Reverse-map label → stage key
-        const stageKey = Object.keys(STAGE_LABELS).find(k => STAGE_LABELS[k] === stageLbl) || stageLbl;
-        drillStage(stageKey);
+        legend: {
+          position: 'right',
+          labels: { font: { size: 11 }, padding: 12, boxWidth: 12 }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${fmtFull$(ctx.raw)}  (${ctx.label})`
+          }
+        }
       }
     }
   });
-}
 
-function buildGrowthChart(growthMap) {
-  const months = Object.keys(growthMap).sort();
-  const labels = months.map(monthLabel);
-  return new Chart(document.getElementById('growth-chart'), {
+  // ── Growth combo ───────────────────────────────────────────────────────
+  const gData = D.pipelineGrowth;
+  new Chart(document.getElementById('growthChart'), {
     type: 'bar',
     data: {
-      labels,
+      labels: gData.map(d => d.month),
       datasets: [
         {
-          label: 'Pipeline Value Added',
-          data: months.map(m => growthMap[m].value),
-          backgroundColor: 'rgba(34,211,238,0.6)',
-          borderRadius: 6,
-          yAxisID: 'y',
+          type: 'bar',
+          label: 'New Deals',
+          data: gData.map(d => d.count),
+          backgroundColor: '#4361ee',
+          borderRadius: 4,
+          yAxisID: 'yCount'
         },
         {
-          label: 'New Deals',
-          data: months.map(m => growthMap[m].count),
           type: 'line',
-          borderColor: '#f59e0b',
-          backgroundColor: 'rgba(245,158,11,0.15)',
-          pointBackgroundColor: '#f59e0b',
-          pointRadius: 5,
+          label: 'New Value',
+          data: gData.map(d => d.value),
+          borderColor: '#f72585',
+          backgroundColor: 'rgba(247,37,133,0.08)',
+          fill: true,
           tension: 0.3,
-          fill: false,
-          yAxisID: 'y2',
+          pointRadius: 4,
+          yAxisID: 'yValue'
         }
       ]
     },
     options: {
-      responsive: true,
-      interaction: { mode: 'index', intersect: false },
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index' },
       plugins: {
-        legend: { labels: { boxWidth: 12, padding: 16, font: { size: 11 } } },
+        legend: { labels: { font: { size: 11 }, boxWidth: 12 } },
         tooltip: {
           callbacks: {
-            label: ctx => ctx.datasetIndex === 0
-              ? ` Value: ${fmt$(ctx.raw)}`
-              : ` New deals: ${ctx.raw}`
+            label: ctx => ctx.dataset.yAxisID === 'yValue'
+              ? ` ${ctx.dataset.label}: ${fmtFull$(ctx.raw)}`
+              : ` ${ctx.dataset.label}: ${ctx.raw}`
           }
         }
       },
       scales: {
-        y:  { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { callback: v => fmt$(v) } },
-        y2: { position: 'right', beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1 } },
-        x:  { grid: { display: false } }
-      },
-      onClick(evt, elements) {
-        if (!elements.length) return;
-        const lbl = this.data.labels[elements[0].index];
-        drillGrowth(lbl);
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        yCount: {
+          position: 'left',
+          beginAtZero: true,
+          ticks: { precision: 0, font: { size: 11 } },
+          grid: { color: '#f0f4f8' },
+          title: { display: true, text: 'Deals', font: { size: 10 }, color: '#718096' }
+        },
+        yValue: {
+          position: 'right',
+          beginAtZero: true,
+          grid: { display: false },
+          ticks: {
+            font: { size: 11 },
+            callback: v => v >= 1e6 ? '$'+(v/1e6).toFixed(1)+'M' : v >= 1e3 ? '$'+(v/1e3).toFixed(0)+'K' : '$'+v
+          },
+          title: { display: true, text: 'Value', font: { size: 10 }, color: '#718096' }
+        }
       }
     }
   });
-}
 
-// ─────────────────────────────────────────────
-//  Update all charts + KPIs + table
-// ─────────────────────────────────────────────
-function updateDashboard() {
-  const m = computeMetrics();
-
-  // KPIs
-  document.getElementById('kpi-pipeline').textContent  = fmt$(m.totalValue);
-  document.getElementById('kpi-accounts').textContent  = m.presaleAccts;
-  document.getElementById('kpi-meetings').textContent  = m.ytdMeet;
-  document.getElementById('kpi-meetings-sub').textContent = `avg ${m.avgMonthly}/month`;
-  document.getElementById('kpi-opps').textContent      = m.totalOpen;
-  document.getElementById('kpi-deal-size').textContent = fmt$(Math.round(m.avgDeal));
-
-  // Filter summary
-  const summary = activeOwners.size === 0
-    ? `All owners · ${D.owners.length} reps`
-    : `${[...activeOwners].join(', ')}`;
-  document.getElementById('filter-summary').textContent = summary;
-
-  // Meetings chart
-  const months   = Object.keys(m.meetMap).sort();
-  const now      = new Date().toISOString().slice(0,7);
-  meetChart.data.labels                     = months.map(monthLabel);
-  meetChart.data.datasets[0].data           = months.map(mn => m.meetMap[mn]);
-  meetChart.data.datasets[0].backgroundColor = months.map(mn =>
-    mn <= now ? 'rgba(99,102,241,0.8)' : 'rgba(99,102,241,0.3)'
-  );
-  meetChart.update();
-
-  // Stage donut chart
-  stageChart.data.labels                         = m.pipelineByStage.map(x => x.label);
-  stageChart.data.datasets[0].data               = m.pipelineByStage.map(x => x.value);
-  stageChart.data.datasets[0].backgroundColor    = m.pipelineByStage.map(x => STAGE_COLORS[x.stage] || '#64748b');
-  stageChart.update();
-
-  // Growth chart
-  const gMonths = Object.keys(m.growthMap).sort();
-  growthChart.data.labels                  = gMonths.map(monthLabel);
-  growthChart.data.datasets[0].data        = gMonths.map(mn => m.growthMap[mn].value);
-  growthChart.data.datasets[1].data        = gMonths.map(mn => m.growthMap[mn].count);
-  growthChart.update();
-
-  // Stage table
-  renderFunnelTable(m.pipelineByStage);
-}
-
-function renderFunnelTable(pipelineByStage) {
-  const tbody   = document.getElementById('funnel-body');
-  tbody.innerHTML = '';
-  const total   = pipelineByStage.reduce((s, x) => s + x.value, 0);
-  const maxVal  = Math.max(...pipelineByStage.map(x => x.value), 1);
-
-  for (const row of pipelineByStage) {
-    const pct    = total > 0 ? ((row.value / total) * 100).toFixed(1) : '0.0';
-    const barPct = ((row.value / maxVal) * 100).toFixed(1);
-    const color  = STAGE_COLORS[row.stage] || '#64748b';
-    const tr     = document.createElement('tr');
-    tr.title     = 'Click to see deals';
+  // ── Stage table ────────────────────────────────────────────────────────
+  const tbody = document.getElementById('stage-tbody');
+  let totalVal = 0, totalCount = 0;
+  pData.forEach((d, i) => {
+    totalVal += d.value; totalCount += d.count;
+    const avg = d.count ? Math.round(d.value / d.count) : 0;
+    const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><span class="stage-name">${row.label}</span></td>
-      <td class="value-text">${row.count}</td>
-      <td class="value-text">${fmt$(row.value)}</td>
-      <td><span class="pct-badge" style="background:${color}22;color:${color}">${pct}%</span></td>
-      <td style="min-width:140px">
-        <div class="stage-bar-wrap">
-          <div class="stage-bar" style="width:${barPct}%;background:${color}"></div>
-        </div>
-      </td>`;
-    tr.addEventListener('click', () => drillStage(row.stage));
+      <td><span class="stage-dot" style="background:${STAGE_COLORS[i % STAGE_COLORS.length]}"></span>${d.stage}</td>
+      <td>${d.count}</td>
+      <td>${fmtFull$(d.value)}</td>
+      <td>${fmtFull$(avg)}</td>
+    `;
     tbody.appendChild(tr);
-  }
-
-  const totals = pipelineByStage.reduce((a, x) => ({ count: a.count + x.count, value: a.value + x.value }), { count: 0, value: 0 });
-  const totRow = document.createElement('tr');
-  totRow.className = 'total-row';
-  totRow.innerHTML = `<td>Total</td><td class="value-text">${totals.count}</td><td class="value-text">${fmt$(totals.value)}</td><td></td><td></td>`;
-  tbody.appendChild(totRow);
-}
-
-// ─────────────────────────────────────────────
-//  Owner filter chips
-// ─────────────────────────────────────────────
-function buildOwnerChips() {
-  const wrap = document.getElementById('owner-chips');
-  wrap.innerHTML = '';
-
-  // "All" chip
-  const all = document.createElement('button');
-  all.className = 'chip chip-all' + (activeOwners.size === 0 ? ' active' : '');
-  all.textContent = 'All';
-  all.addEventListener('click', () => {
-    activeOwners.clear();
-    refreshChips();
-    updateDashboard();
   });
-  wrap.appendChild(all);
+  const tfoot = document.getElementById('stage-tfoot');
+  const totalAvg = totalCount ? Math.round(totalVal / totalCount) : 0;
+  tfoot.innerHTML = `
+    <tr>
+      <td>Total</td>
+      <td>${totalCount}</td>
+      <td>${fmtFull$(totalVal)}</td>
+      <td>${fmtFull$(totalAvg)}</td>
+    </tr>
+  `;
 
-  // Per-owner chips
-  D.owners.forEach((owner, i) => {
-    const chip  = document.createElement('button');
-    const color = OWNER_PALETTE[i % OWNER_PALETTE.length];
-    chip.className = 'chip' + (activeOwners.has(owner) ? ' active' : '');
-    chip.dataset.owner = owner;
-    chip.textContent   = owner.split(' ')[0]; // first name only to keep it compact
-    chip.title         = owner;
-
-    if (activeOwners.has(owner)) {
-      chip.style.background  = color;
-      chip.style.borderColor = color;
-    }
-
-    chip.addEventListener('click', () => {
-      if (activeOwners.has(owner)) {
-        activeOwners.delete(owner);
-        if (activeOwners.size === 0) { /* back to all */ }
-      } else {
-        activeOwners.add(owner);
-      }
-      refreshChips();
-      updateDashboard();
-    });
-
-    wrap.appendChild(chip);
-  });
-}
-
-function refreshChips() {
-  const allChip = document.querySelector('.chip-all');
-  if (allChip) allChip.classList.toggle('active', activeOwners.size === 0);
-
-  document.querySelectorAll('.chip[data-owner]').forEach((chip, i) => {
-    const owner  = chip.dataset.owner;
-    const color  = OWNER_PALETTE[i % OWNER_PALETTE.length];
-    const active = activeOwners.has(owner);
-    chip.classList.toggle('active', active);
-    chip.style.background  = active ? color : '';
-    chip.style.borderColor = active ? color : '';
-    chip.style.color       = active ? '#fff' : '';
-  });
-}
-
-// ─────────────────────────────────────────────
-//  Drill-down drawer
-// ─────────────────────────────────────────────
-function openDrawer(title, sub, columns, rows) {
-  document.getElementById('drawer-title').textContent = title;
-  document.getElementById('drawer-sub').textContent   = sub;
-  document.getElementById('drawer-count').textContent = rows.length + ' record' + (rows.length !== 1 ? 's' : '');
-
-  // thead
-  const thead = document.getElementById('drawer-thead');
-  thead.innerHTML = '<tr>' + columns.map(c =>
-    `<th class="${c.right ? 'right' : ''}">${c.label}</th>`
-  ).join('') + '</tr>';
-
-  // tbody
-  const tbody = document.getElementById('drawer-tbody');
-  tbody.innerHTML = '';
-  const empty = document.getElementById('drawer-empty');
-
-  if (rows.length === 0) {
-    empty.style.display = 'block';
-    document.getElementById('drawer-table').style.display = 'none';
-  } else {
-    empty.style.display = 'none';
-    document.getElementById('drawer-table').style.display = 'table';
-    for (const row of rows) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = columns.map(c => {
-        const val = row[c.key] ?? '—';
-        return `<td class="${c.right ? 'right' : ''}">${val}</td>`;
-      }).join('');
-      tbody.appendChild(tr);
-    }
-  }
-
-  document.getElementById('drawer-overlay').classList.add('open');
-}
-
-function closeDrawer() {
-  document.getElementById('drawer-overlay').classList.remove('open');
-}
-
-// ── Click: meetings bar → events that month
-function drillMeetings(monthLabel) {
-  // Convert "Jan 2026" → "2026-01"
-  const months3 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const parts   = monthLabel.split(' ');
-  const ym      = parts[1] + '-' + String(months3.indexOf(parts[0]) + 1).padStart(2,'0');
-
-  const filteredPresaleAccts = new Set(
-    D.opportunities.filter(o =>
-      isOwnerMatch(o.ownerName) && PRESALE_STAGES.has(o.stage) && o.accountId
-    ).map(o => o.accountId)
-  );
-
-  const rows = D.events
-    .filter(e =>
-      isOwnerMatch(e.ownerName) &&
-      filteredPresaleAccts.has(e.accountId) &&
-      (e.activityDate || '').startsWith(ym)
-    )
-    .sort((a,b) => (a.activityDate||'').localeCompare(b.activityDate||''))
-    .map(e => ({
-      subject:  e.subject || '(no subject)',
-      account:  e.accountName || '—',
-      owner:    e.ownerName || '—',
-      date:     e.activityDate || '—',
-    }));
-
-  openDrawer(
-    'Meetings · ' + monthLabel,
-    'Events on pre-sale accounts',
-    [
-      { label: 'Subject',  key: 'subject' },
-      { label: 'Account',  key: 'account' },
-      { label: 'Owner',    key: 'owner'   },
-      { label: 'Date',     key: 'date', right: true },
-    ],
-    rows
-  );
-}
-
-// ── Click: stage donut or table row → opps in that stage
-function drillStage(stageName) {
-  const rows = D.opportunities
-    .filter(o => o.stage === stageName && isOwnerMatch(o.ownerName))
-    .sort((a,b) => (b.amount||0) - (a.amount||0))
-    .map(o => ({
-      name:    o.name || '—',
-      account: o.accountName || '—',
-      owner:   o.ownerName || '—',
-      amount:  o.amount != null ? fmt$(o.amount) : '—',
-      close:   o.closeDate || '—',
-    }));
-
-  const label = STAGE_LABELS[stageName] || stageName;
-  openDrawer(
-    'Stage: ' + label,
-    'Open opportunities',
-    [
-      { label: 'Opportunity', key: 'name'    },
-      { label: 'Account',     key: 'account' },
-      { label: 'Owner',       key: 'owner'   },
-      { label: 'Amount',      key: 'amount', right: true },
-      { label: 'Close Date',  key: 'close',  right: true },
-    ],
-    rows
-  );
-}
-
-// ── Click: growth bar → new opps that month
-function drillGrowth(monthLabel) {
-  const months3 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const parts   = monthLabel.split(' ');
-  const ym      = parts[1] + '-' + String(months3.indexOf(parts[0]) + 1).padStart(2,'0');
-
-  const rows = D.opportunities
-    .filter(o => isOwnerMatch(o.ownerName) && (o.createdDate||'').startsWith(ym))
-    .sort((a,b) => (b.amount||0) - (a.amount||0))
-    .map(o => ({
-      name:    o.name || '—',
-      account: o.accountName || '—',
-      stage:   `<span class="stage-pill" style="background:${STAGE_COLORS[o.stage]||'#64748b'}22;color:${STAGE_COLORS[o.stage]||'#94a3b8'}">${STAGE_LABELS[o.stage]||o.stage||'—'}</span>`,
-      owner:   o.ownerName || '—',
-      amount:  o.amount != null ? fmt$(o.amount) : '—',
-    }));
-
-  openDrawer(
-    'New Pipeline · ' + monthLabel,
-    'Opportunities created this month',
-    [
-      { label: 'Opportunity', key: 'name'    },
-      { label: 'Account',     key: 'account' },
-      { label: 'Stage',       key: 'stage'   },
-      { label: 'Owner',       key: 'owner'   },
-      { label: 'Amount',      key: 'amount', right: true },
-    ],
-    rows
-  );
-}
-
-// ─────────────────────────────────────────────
-//  Init
-// ─────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('fy').textContent      = D.fiscalYear;
-  document.getElementById('updated').textContent = 'Updated ' + D.generated;
-  document.getElementById('footer-updated').textContent = 'Last refreshed: ' + D.generated;
-
-  buildOwnerChips();
-
-  const init = computeMetrics();
-  meetChart   = buildMeetChart(init.meetMap);
-  stageChart  = buildStageChart(init.pipelineByStage);
-  growthChart = buildGrowthChart(init.growthMap);
-  renderFunnelTable(init.pipelineByStage);
-
-  // KPIs
-  document.getElementById('kpi-pipeline').textContent  = fmt$(init.totalValue);
-  document.getElementById('kpi-accounts').textContent  = init.presaleAccts;
-  document.getElementById('kpi-meetings').textContent  = init.ytdMeet;
-  document.getElementById('kpi-meetings-sub').textContent = `avg ${init.avgMonthly}/month`;
-  document.getElementById('kpi-opps').textContent      = init.totalOpen;
-  document.getElementById('kpi-deal-size').textContent = fmt$(Math.round(init.avgDeal));
-  document.getElementById('filter-summary').textContent = `All owners · ${D.owners.length} reps`;
-
-  // Drawer close
-  document.getElementById('drawer-close').addEventListener('click', closeDrawer);
-  document.getElementById('drawer-overlay').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeDrawer();
-  });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
-});
+  // Footer
+  document.getElementById('footer').textContent =
+    `Data source: Salesforce · Pre-sale accounts defined by RecordType = "Pre Sale" · FY${D.fiscalYear}`;
+})();
 </script>
-
-<!-- ── Layout ── -->
-<header>
-  <div class="logo-area">
-    <h1>Sales Pipeline Dashboard</h1>
-    <p>Pre-sale accounts · Fiscal Year <span id="fy"></span></p>
-  </div>
-  <div class="header-meta">
-    <div class="badge">Live Data</div>
-    <div id="updated"></div>
-  </div>
-</header>
-
-<!-- Owner filter -->
-<div class="filter-bar">
-  <span class="filter-label">Owner</span>
-  <div class="owner-chips" id="owner-chips"></div>
-  <span class="filter-summary" id="filter-summary"></span>
-</div>
-
-<!-- KPIs -->
-<div class="kpi-grid">
-  <div class="kpi-card indigo">
-    <div class="kpi-label">Open Pipeline Value</div>
-    <div class="kpi-value" id="kpi-pipeline"></div>
-    <div class="kpi-sub">open opportunities</div>
-  </div>
-  <div class="kpi-card cyan">
-    <div class="kpi-label">Pre-Sale Accounts</div>
-    <div class="kpi-value" id="kpi-accounts"></div>
-    <div class="kpi-sub">with active opportunities</div>
-  </div>
-  <div class="kpi-card amber">
-    <div class="kpi-label">YTD Meetings</div>
-    <div class="kpi-value" id="kpi-meetings"></div>
-    <div class="kpi-sub" id="kpi-meetings-sub"></div>
-  </div>
-  <div class="kpi-card green">
-    <div class="kpi-label">Open Opportunities</div>
-    <div class="kpi-value" id="kpi-opps"></div>
-    <div class="kpi-sub">across all active stages</div>
-  </div>
-  <div class="kpi-card rose">
-    <div class="kpi-label">Avg Deal Size</div>
-    <div class="kpi-value" id="kpi-deal-size"></div>
-    <div class="kpi-sub">open opps with amount</div>
-  </div>
-</div>
-
-<!-- Charts -->
-<div class="charts-grid">
-  <div class="chart-card" data-clickable>
-    <div class="chart-title">Meetings / Month</div>
-    <div class="chart-subtitle">Pre-sale accounts · FY2026</div>
-    <div class="click-hint">Click a bar to see individual meetings</div>
-    <canvas id="meetings-chart"></canvas>
-  </div>
-  <div class="chart-card" data-clickable>
-    <div class="chart-title">Pipeline by Stage</div>
-    <div class="chart-subtitle">Current open opportunity value</div>
-    <div class="click-hint">Click a segment to see deals in that stage</div>
-    <canvas id="stage-value-chart"></canvas>
-  </div>
-  <div class="chart-card full" data-clickable>
-    <div class="chart-title">Pipeline Growth</div>
-    <div class="chart-subtitle">New opportunities created per month · count &amp; value</div>
-    <div class="click-hint">Click a bar to see deals created that month</div>
-    <canvas id="growth-chart"></canvas>
-  </div>
-</div>
-
-<!-- Stage table -->
-<div class="chart-card">
-  <div class="chart-title">Stage Progression</div>
-  <div class="chart-subtitle">Open opportunity distribution across pipeline stages</div>
-  <table class="funnel-table">
-    <thead>
-      <tr>
-        <th>Stage</th>
-        <th>Deals</th>
-        <th>Pipeline Value</th>
-        <th>% of Total</th>
-        <th style="min-width:140px">Share</th>
-      </tr>
-    </thead>
-    <tbody id="funnel-body"></tbody>
-  </table>
-</div>
-
-<footer>
-  <span>Data source: Salesforce · Pre-sale accounts only</span>
-  <span id="footer-updated"></span>
-</footer>
-
-<!-- ── Drill-down drawer ── -->
-<div class="drawer-overlay" id="drawer-overlay">
-  <div class="drawer" id="drawer">
-    <div class="drawer-header">
-      <div>
-        <div class="drawer-title" id="drawer-title"></div>
-        <div class="drawer-sub"  id="drawer-sub"></div>
-        <div class="drawer-count" id="drawer-count"></div>
-      </div>
-      <button class="drawer-close" id="drawer-close" title="Close">✕</button>
-    </div>
-    <div class="drawer-body">
-      <table class="drawer-table" id="drawer-table">
-        <thead id="drawer-thead"></thead>
-        <tbody id="drawer-tbody"></tbody>
-      </table>
-      <div class="drawer-empty" id="drawer-empty" style="display:none">No records found.</div>
-    </div>
-  </div>
-</div>
 </body>
 </html>
