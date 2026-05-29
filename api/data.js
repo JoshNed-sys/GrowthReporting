@@ -10,15 +10,14 @@ const FISCAL_YEAR = new Date().getFullYear();
 
 async function soql(query) {
   const body = JSON.stringify({
-    action: 'SALESFORCE_RUN_SOQL_QUERY',
-    input: { query },
-    connectedAccountId: 'ca_Wr5FgPsREVL3',
+    entity_id: 'josh@nedhelps.com',
+    arguments: { query },
   });
 
   return new Promise((resolve, reject) => {
     const req = https.request({
       hostname: 'backend.composio.dev',
-      path: '/api/v1/actions/execute',
+      path: '/api/v3/tools/execute/SALESFORCE_RUN_SOQL_QUERY',
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -31,8 +30,8 @@ async function soql(query) {
       res.on('end', () => {
         try {
           const json = JSON.parse(data);
-          if (json.error) return reject(new Error(typeof json.error === 'string' ? json.error : JSON.stringify(json.error)));
-          const records = json?.data?.records || json?.response?.data?.records || [];
+          if (!json.successful) return reject(new Error(json.error || 'Composio error'));
+          const records = json?.data?.response_data?.records || [];
           resolve(records);
         } catch (e) {
           reject(new Error('Failed to parse Composio response: ' + data.slice(0, 300)));
