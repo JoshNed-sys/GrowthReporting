@@ -1,66 +1,45 @@
 // api/data.js — Vercel serverless function
-// Queries Salesforce live and returns dashboard JSON
+// Queries Salesforce via Composio and returns dashboard JSON
 
 const https = require('https');
 
 const PIPELINE_STAGES = ['Qualify', 'Explore', 'Propose', 'Negotiate', 'Nurture'];
 const FISCAL_YEAR = new Date().getFullYear();
 
-// ── Salesforce auth (OAuth 2.0 client credentials flow) ─────────────────────
+// ── Composio SOQL helper ─────────────────────────────────────────────────────
 
-async function sfLogin() {
-  const params = new URLSearchParams({
-    grant_type: 'password',
-    client_id: process.env.SF_CLIENT_ID,
-    client_secret: process.env.SF_CLIENT_SECRET,
-    username: process.env.SF_USERNAME,
-    password: process.env.SF_PASSWORD + (process.env.SF_SECURITY_TOKEN || ''),
+async function soql(query) {
+  const body = JSON.stringify({
+    action: 'SALESFORCE_RUN_SOQL_QUERY',
+    input: { query },
   });
-  const body = params.toString();
 
   return new Promise((resolve, reject) => {
     const req = https.request({
-      hostname: 'login.salesforce.com',
-      path: '/services/oauth2/token',
+      hostname: 'backend.composio.dev',
+      path: '/api/v1/actions/execute',
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.COMPOSIO_API_KEY,
         'Content-Length': Buffer.byteLength(body),
       },
     }, res => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
-        const json = JSON.parse(data);
-        if (json.error) return reject(new Error(json.error + ': ' + json.error_description));
-        resolve({ access_token: json.access_token, instance_url: json.instance_url });
+        try {
+          const json = JSON.parse(data);
+          if (json.error) return reject(new Error(json.error));
+          const records = json?.data?.records || json?.response?.data?.records || [];
+          resolve(records);
+        } catch (e) {
+          reject(new Error('Failed to parse Composio response: ' + data.slice(0, 200)));
+        }
       });
     });
     req.on('error', reject);
     req.write(body);
-    req.end();
-  });
-}
-
-async function soql(instanceUrl, accessToken, query) {
-  const path = '/services/data/v59.0/query?q=' + encodeURIComponent(query);
-  return new Promise((resolve, reject) => {
-    const url = new URL(instanceUrl);
-    const req = https.request({
-      hostname: url.hostname,
-      path,
-      method: 'GET',
-      headers: { Authorization: 'Bearer ' + accessToken },
-    }, res => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        const json = JSON.parse(data);
-        if (json.errorCode) reject(new Error(json.message));
-        else resolve(json.records || []);
-      });
-    });
-    req.on('error', reject);
     req.end();
   });
 }
@@ -82,41 +61,26 @@ function monthSortKey(label) {
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 's-maxage=300'); // cache 5 mins on Vercel edge
+  res.setHeader('Cache-Control', 's-maxage=300');
 
   try {
-    const { instance_url, access_token } = await sfLogin();
     const stagesCsv = PIPELINE_STAGES.map(s => `'${s}'`).join(',');
-    const fyStart = `${FISCAL_YEAR}-01-01T00:00:00Z`;
     const today = new Date().toISOString().slice(0, 10);
     const currentMonth = today.slice(0, 7);
 
     // 1. Open pipeline opps
-    const opps = await soql(instance_url, access_token,
-      `SELECT Id, StageName, Amount, CreatedDate, AccountId
-       FROM Opportunity
-       WHERE StageName IN (${stagesCsv})
-       AND AccountId != null
-       LIMIT 2000`
+    const opps = await soql(
+      `SELECT Id, StageName, Amount, CreatedDate, AccountId FROM Opportunity WHERE StageName IN (${stagesCsv}) AND AccountId != null LIMIT 2000`
     );
 
     // 2. Events this FY (past months only)
-    const events = await soql(instance_url, access_token,
-      `SELECT Id, ActivityDate, AccountId
-       FROM Event
-       WHERE ActivityDate >= ${FISCAL_YEAR}-01-01
-       AND ActivityDate <= ${today}
-       AND AccountId != null
-       LIMIT 2000`
+    const events = await soql(
+      `SELECT Id, ActivityDate, AccountId FROM Event WHERE ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} AND AccountId != null LIMIT 2000`
     );
 
-    // 3. Closed won + lost this FY (for win rate)
-    const closedOpps = await soql(instance_url, access_token,
-      `SELECT Id, StageName, Amount, CloseDate
-       FROM Opportunity
-       WHERE StageName IN ('Closed Won', 'Closed Lost')
-       AND CloseDate >= ${FISCAL_YEAR}-01-01
-       LIMIT 2000`
+    // 3. Closed won + lost this FY
+    const closedOpps = await soql(
+      `SELECT Id, StageName, Amount, CloseDate FROM Opportunity WHERE StageName IN ('Closed Won', 'Closed Lost') AND CloseDate >= ${FISCAL_YEAR}-01-01 LIMIT 2000`
     );
 
     // ── Pipeline by stage ──
@@ -171,13 +135,11 @@ module.exports = async (req, res) => {
 
     // ── Win rate ──
     const closedWon = closedOpps.filter(o => o.StageName === 'Closed Won');
-    const closedLost = closedOpps.filter(o => o.StageName === 'Closed Lost');
     const winRate = closedOpps.length
       ? Math.round((closedWon.length / closedOpps.length) * 100)
       : null;
     const closedWonValue = closedWon.reduce((a, o) => a + (o.Amount || 0), 0);
 
-    // ── Response ──
     res.status(200).json({
       generated: today,
       fiscalYear: FISCAL_YEAR,
