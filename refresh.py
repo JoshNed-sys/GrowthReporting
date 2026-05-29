@@ -68,7 +68,7 @@ print(f"  Pre-sale accounts (RecordType): {len(presale_acct_ids)}")
 opps = soql(
     f"SELECT Id, StageName, Amount, CreatedDate, AccountId "
     f"FROM Opportunity "
-    f"WHERE CreatedDate >= {FY_START} AND AccountId != null LIMIT 2000"
+    f"WHERE AccountId != null LIMIT 2000"
 )
 print(f"  Opportunities (FY{FISCAL_YEAR}): {len(opps)}")
 
