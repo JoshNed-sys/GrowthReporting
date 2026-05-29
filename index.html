@@ -77,18 +77,18 @@
   document.getElementById('kpi-meetings').textContent = D.summary.ytdMeetings;
   document.getElementById('kpi-avg').textContent = 'Avg ' + D.summary.avgMonthlyMeetings + '/mo';
 
-  // MTD: last entry in pipelineGrowth
+ // MTD: last entry in pipelineGrowth
   const growth = D.pipelineGrowth || [];
   if (growth.length > 0) {
     const mtd = growth[growth.length - 1];
- const mtd = growth[growth.length - 1];
-const prev = growth[growth.length - 2];
-const momPct = prev && prev.value > 0
-  ? Math.round((mtd.value - prev.value) / prev.value * 100)
-  : null;
-const momStr = momPct !== null ? ` (${momPct >= 0 ? '+' : ''}${momPct}% MoM)` : '';
-document.getElementById('kpi-mtd').textContent = fmt(mtd.value);
-document.getElementById('kpi-mtd-count').textContent = mtd.count + ' new opps · ' + mtd.month + momStr;
+    const prev = growth[growth.length - 2];
+    const momPct = prev && prev.value > 0
+      ? Math.round((mtd.value - prev.value) / prev.value * 100)
+      : null;
+    const momStr = momPct !== null ? ` (${momPct >= 0 ? '+' : ''}${momPct}% MoM)` : '';
+    document.getElementById('kpi-mtd').textContent = fmt(mtd.value);
+    document.getElementById('kpi-mtd-count').textContent = mtd.count + ' new opps · ' + mtd.month + momStr;
+  }
 
   // MoM% plugin for bar charts
   const momPlugin = {
