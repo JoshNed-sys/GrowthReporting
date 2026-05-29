@@ -1,487 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pre-Sale Pipeline Dashboard</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sales Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #f4f6f9;
-    color: #1a1a2e;
-    min-height: 100vh;
-  }
-
-  header {
-    background: #1a1a2e;
-    color: #fff;
-    padding: 18px 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: 0.01em; }
-  header .meta { font-size: 0.78rem; color: #a0aec0; }
-
-  .container { max-width: 1200px; margin: 0 auto; padding: 28px 24px; }
-
-  /* KPI row */
-  .kpi-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
-    margin-bottom: 28px;
-  }
-  .kpi {
-    background: #fff;
-    border-radius: 10px;
-    padding: 20px 22px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.07);
-  }
-  .kpi .label {
-    font-size: 0.72rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #718096;
-    margin-bottom: 8px;
-  }
-  .kpi .value {
-    font-size: 1.9rem;
-    font-weight: 700;
-    color: #1a1a2e;
-    line-height: 1;
-  }
-  .kpi .sub {
-    font-size: 0.75rem;
-    color: #a0aec0;
-    margin-top: 4px;
-  }
-
-  /* Chart grid */
-  .charts-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 20px;
-  }
-  .chart-card {
-    background: #fff;
-    border-radius: 10px;
-    padding: 22px 24px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.07);
-  }
-  .chart-card.full { grid-column: 1 / -1; }
-  .chart-card h2 {
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #718096;
-    margin-bottom: 18px;
-  }
-  .chart-wrap { position: relative; height: 240px; }
-  .chart-card.full .chart-wrap { height: 220px; }
-
-  /* Stage table */
-  .table-card {
-    background: #fff;
-    border-radius: 10px;
-    padding: 22px 24px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.07);
-    margin-bottom: 20px;
-  }
-  .table-card h2 {
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #718096;
-    margin-bottom: 16px;
-  }
-  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-  thead th {
-    text-align: left;
-    padding: 8px 12px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #a0aec0;
-    border-bottom: 1px solid #e2e8f0;
-  }
-  thead th:not(:first-child) { text-align: right; }
-  tbody tr:hover { background: #f7fafc; }
-  tbody td {
-    padding: 10px 12px;
-    border-bottom: 1px solid #f0f4f8;
-    color: #2d3748;
-  }
-  tbody td:not(:first-child) { text-align: right; }
-  .stage-dot {
-    display: inline-block;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    margin-right: 8px;
-    vertical-align: middle;
-  }
-  tfoot td {
-    padding: 10px 12px;
-    font-weight: 600;
-    color: #1a1a2e;
-    border-top: 2px solid #e2e8f0;
-    font-size: 0.875rem;
-  }
-  tfoot td:not(:first-child) { text-align: right; }
-
-  footer {
-    text-align: center;
-    font-size: 0.72rem;
-    color: #a0aec0;
-    padding: 20px 0 32px;
-  }
-
-  @media (max-width: 680px) {
-    .charts-grid { grid-template-columns: 1fr; }
-    .chart-card.full { grid-column: 1; }
-  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f6fa; color: #1a1a2e; }
+  header { background: #1a1a2e; color: #fff; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: .02em; }
+  header span { font-size: .8rem; opacity: .55; }
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 24px 32px 0; }
+  .kpi { background: #fff; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .kpi .label { font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #888; margin-bottom: 6px; }
+  .kpi .value { font-size: 2rem; font-weight: 700; color: #1a1a2e; }
+  .kpi .sub { font-size: .8rem; color: #aaa; margin-top: 4px; }
+  .charts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; padding: 20px 32px 32px; }
+  .card { background: #fff; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .card h2 { font-size: .85rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #888; margin-bottom: 16px; }
+  canvas { max-height: 260px; }
 </style>
 </head>
 <body>
-
 <header>
-  <h1>Pre-Sale Pipeline Dashboard</h1>
-  <span class="meta" id="hdr-meta">Loading…</span>
+  <h1>Sales Dashboard</h1>
+  <span id="generated-date"></span>
 </header>
 
-<div class="container">
-
-  <!-- Owner filter -->
-  <div class="filter-bar" id="filter-bar">
-    <span class="filter-label">Owner</span>
+<div class="kpis">
+  <div class="kpi">
+    <div class="label">Open Pipeline Value</div>
+    <div class="value" id="kpi-pipeline">—</div>
+    <div class="sub" id="kpi-opps"></div>
   </div>
-
-  <!-- KPIs -->
-  <div class="kpi-row">
-    <div class="kpi">
-      <div class="label">Open Pipeline</div>
-      <div class="value" id="kpi-pipeline">—</div>
-      <div class="sub" id="kpi-pipeline-sub"></div>
-    </div>
-    <div class="kpi">
-      <div class="label">Open Deals</div>
-      <div class="value" id="kpi-deals">—</div>
-      <div class="sub">active opportunities</div>
-    </div>
-    <div class="kpi">
-      <div class="label">YTD Meetings</div>
-      <div class="value" id="kpi-meetings">—</div>
-      <div class="sub" id="kpi-meetings-sub"></div>
-    </div>
+  <div class="kpi">
+    <div class="label">YTD Meetings</div>
+    <div class="value" id="kpi-meetings">—</div>
+    <div class="sub" id="kpi-avg"></div>
   </div>
-
-  <!-- Charts row -->
-  <div class="charts-grid">
-    <div class="chart-card">
-      <h2>Meetings / Month</h2>
-      <div class="chart-wrap"><canvas id="meetingsChart"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <h2>Pipeline by Stage</h2>
-      <div class="chart-wrap"><canvas id="stageChart"></canvas></div>
-    </div>
-    <div class="chart-card full">
-      <h2>New Pipeline Created per Month</h2>
-      <div class="chart-wrap"><canvas id="growthChart"></canvas></div>
-    </div>
-  </div>
-
-  <!-- Stage table -->
-  <div class="table-card">
-    <h2>Stage Breakdown</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Stage</th>
-          <th>Deals</th>
-          <th>Pipeline Value</th>
-          <th>Avg Deal Size</th>
-        </tr>
-      </thead>
-      <tbody id="stage-tbody"></tbody>
-      <tfoot id="stage-tfoot"></tfoot>
-    </table>
+  <div class="kpi">
+    <div class="label">New Pipeline (MTD)</div>
+    <div class="value" id="kpi-mtd">—</div>
+    <div class="sub" id="kpi-mtd-count"></div>
   </div>
 </div>
 
-<footer id="footer">—</footer>
+<div class="charts">
+  <div class="card">
+    <h2>Pipeline by Stage</h2>
+    <canvas id="stageChart"></canvas>
+  </div>
+  <div class="card">
+    <h2>Meetings per Month</h2>
+    <canvas id="meetingsChart"></canvas>
+  </div>
+  <div class="card">
+    <h2>New Pipeline Added (MoM)</h2>
+    <canvas id="growthChart"></canvas>
+  </div>
+</div>
 
 <script src="data.js"></script>
 <script>
 (function () {
   const D = window.DASHBOARD_DATA;
-  if (!D) { document.body.innerHTML = '<p style="padding:40px;color:red">data.js not loaded.</p>'; return; }
+  if (!D) { document.body.innerHTML = '<p style="padding:2rem;color:red">data.js not loaded</p>'; return; }
 
-  const fmt$    = v => '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v.toLocaleString());
-  const fmtFull$ = v => '$' + Math.round(v).toLocaleString();
+  // Header date
+  document.getElementById('generated-date').textContent = 'Updated ' + D.generated;
 
-  const STAGE_ORDER  = ['Qualify','Explore','Propose','Negotiate','Nurture'];
-  const STAGE_COLORS = ['#4361ee','#3a0ca3','#7209b7','#f72585','#e85d04'];
+  // KPIs
+  const fmt = v => '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'K');
+  document.getElementById('kpi-pipeline').textContent = fmt(D.summary.totalOpenPipelineValue);
+  document.getElementById('kpi-opps').textContent = D.summary.totalOpenOpportunities + ' open opportunities';
+  document.getElementById('kpi-meetings').textContent = D.summary.ytdMeetings;
+  document.getElementById('kpi-avg').textContent = 'Avg ' + D.summary.avgMonthlyMeetings + '/mo';
 
-  // Header
-  document.getElementById('hdr-meta').textContent = `FY${D.fiscalYear} · Updated ${D.generated}`;
-  document.getElementById('footer').textContent =
-    `Data source: Salesforce · Pipeline stages: Qualify, Explore, Propose, Negotiate, Nurture · FY${D.fiscalYear}`;
+  // MTD: last entry in pipelineGrowth
+  const growth = D.pipelineGrowth;
+  const mtd = growth[growth.length - 1];
+  document.getElementById('kpi-mtd').textContent = fmt(mtd.value);
+  document.getElementById('kpi-mtd-count').textContent = mtd.count + ' new opps · ' + mtd.month;
 
-  // ── Owner filter chips ─────────────────────────────────────────────────
-  const selectedOwners = new Set(); // empty = all
-  const filterBar = document.getElementById('filter-bar');
+  // MoM% plugin for bar charts
+  const momPlugin = {
+    id: 'momLabels',
+    afterDatasetsDraw(chart) {
+      const { ctx, data } = chart;
+      const vals = data.datasets[0].data;
+      ctx.save();
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      vals.forEach((v, i) => {
+        const meta = chart.getDatasetMeta(0);
+        const bar = meta.data[i];
+        if (i === 0) return;
+        const prev = vals[i - 1];
+        if (!prev || prev === 0) return;
+        const pct = Math.round((v - prev) / prev * 100);
+        const label = (pct >= 0 ? '+' : '') + pct + '%';
+        ctx.fillStyle = pct >= 0 ? '#16a34a' : '#dc2626';
+        ctx.fillText(label, bar.x, bar.y - 6);
+      });
+      ctx.restore();
+    }
+  };
 
-  // "All" chip
-  const allChip = document.createElement('span');
-  allChip.className = 'chip active';
-  allChip.textContent = 'All';
-  allChip.addEventListener('click', () => {
-    selectedOwners.clear();
-    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-    allChip.classList.add('active');
-    render();
+  // Stage chart (doughnut)
+  const stageData = D.pipelineByStage;
+  const stageColors = ['#6366f1','#22d3ee','#f59e0b','#f43f5e'];
+  new Chart(document.getElementById('stageChart'), {
+    type: 'doughnut',
+    data: {
+      labels: stageData.map(s => s.stage),
+      datasets: [{
+        data: stageData.map(s => s.value),
+        backgroundColor: stageColors,
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const d = stageData[ctx.dataIndex];
+              return ` ${d.stage}: ${fmt(d.value)} (${d.count} opps)`;
+            }
+          }
+        }
+      }
+    }
   });
-  filterBar.appendChild(allChip);
 
-  // Per-owner chips
-  (D.owners || []).forEach(owner => {
-    const chip = document.createElement('span');
-    chip.className = 'chip';
-    chip.textContent = owner;
-    chip.addEventListener('click', () => {
-      allChip.classList.remove('active');
-      if (selectedOwners.has(owner)) {
-        selectedOwners.delete(owner);
-        chip.classList.remove('active');
-      } else {
-        selectedOwners.add(owner);
-        chip.classList.add('active');
-      }
-      if (selectedOwners.size === 0) {
-        allChip.classList.add('active');
-      }
-      render();
-    });
-    filterBar.appendChild(chip);
+  // Meetings chart (bar)
+  const mData = D.meetingsPerMonth;
+  new Chart(document.getElementById('meetingsChart'), {
+    type: 'bar',
+    plugins: [momPlugin],
+    data: {
+      labels: mData.map(m => m.month),
+      datasets: [{
+        label: 'Meetings',
+        data: mData.map(m => m.meetings),
+        backgroundColor: '#6366f1',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      layout: { padding: { top: 24 } },
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 5 } } }
+    }
   });
 
-  // ── Chart instances ────────────────────────────────────────────────────
-  let meetingsChart, stageChart, growthChart;
-
-  // ── MoM label plugin factory ───────────────────────────────────────────
-  function makeMomPlugin(id) {
-    return {
-      id,
-      afterDatasetsDraw(chart) {
-        const { ctx } = chart;
-        const vals = chart.getDatasetMeta(0).data;
-        const rawData = chart.data.datasets[0].data;
-        vals.forEach((bar, i) => {
-          if (i === 0) return;
-          const prev = rawData[i - 1];
-          if (!prev) return;
-          const pct = Math.round(((rawData[i] - prev) / prev) * 100);
-          const label = (pct >= 0 ? '+' : '') + pct + '%';
-          ctx.save();
-          ctx.font = 'bold 10px sans-serif';
-          ctx.fillStyle = pct >= 0 ? '#38a169' : '#e53e3e';
-          ctx.textAlign = 'center';
-          ctx.fillText(label, bar.x, bar.y - 6);
-          ctx.restore();
-        });
+  // Growth chart (bar)
+  const gData = D.pipelineGrowth;
+  new Chart(document.getElementById('growthChart'), {
+    type: 'bar',
+    plugins: [momPlugin],
+    data: {
+      labels: gData.map(g => g.month),
+      datasets: [{
+        label: 'New Pipeline Value',
+        data: gData.map(g => g.value),
+        backgroundColor: '#22d3ee',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      layout: { padding: { top: 24 } },
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { callback: v => '$' + (v/1e3).toFixed(0)+'K' }
+        }
       }
-    };
-  }
-
-  // ── Compute metrics from raw data ──────────────────────────────────────
-  function compute() {
-    const filterActive = selectedOwners.size > 0;
-
-    // Filter opps
-    const opps = filterActive
-      ? D.opps.filter(o => selectedOwners.has(o.ownerName))
-      : D.opps;
-
-    // Account IDs from filtered opps (for meeting filter)
-    const acctIds = new Set(opps.map(o => o.accountId));
-
-    // Filter events by matching account IDs
-    const events = D.events.filter(e => acctIds.has(e.accountId));
-
-    // Pipeline by stage
-    const pipelineByStage = {};
-    STAGE_ORDER.forEach(s => { pipelineByStage[s] = { value: 0, count: 0 }; });
-    opps.forEach(o => {
-      if (pipelineByStage[o.stage]) {
-        pipelineByStage[o.stage].count++;
-        pipelineByStage[o.stage].value += o.amount;
-      }
-    });
-
-    // Meetings by month
-    const meetingsByMonth = {};
-    events.forEach(e => {
-      const m = (e.activityDate || '').slice(0, 7);
-      if (m) meetingsByMonth[m] = (meetingsByMonth[m] || 0) + 1;
-    });
-
-    // Growth by month (allOpps filtered by owner)
-    const growthOpps = filterActive
-      ? (D.allOpps || []).filter(o => selectedOwners.has(o.ownerName))
-      : (D.allOpps || []);
-    const growthByMonth = {};
-    growthOpps.forEach(o => {
-      const m = (o.createdDate || '').slice(0, 7);
-      if (!m) return;
-      if (!growthByMonth[m]) growthByMonth[m] = { count: 0, value: 0 };
-      growthByMonth[m].count++;
-      growthByMonth[m].value += o.amount;
-    });
-
-    // Summaries
-    const totalPipeline = opps.reduce((s, o) => s + o.amount, 0);
-    const ytdMeetings   = Object.values(meetingsByMonth).reduce((s, v) => s + v, 0);
-    const monthsW       = Object.values(meetingsByMonth).filter(v => v > 0).length;
-    const avgMonthly    = monthsW ? Math.round(ytdMeetings / monthsW * 10) / 10 : 0;
-
-    const monthsSorted  = Object.keys(meetingsByMonth).sort();
-    const growthSorted  = Object.keys(growthByMonth).sort();
-
-    return {
-      opps, totalPipeline, ytdMeetings, avgMonthly,
-      pipelineByStage, meetingsByMonth, growthByMonth,
-      monthsSorted, growthSorted,
-    };
-  }
-
-  function monthLabel(ym) {
-    const [y, m] = ym.split('-');
-    return new Date(+y, +m - 1, 1).toLocaleString('default', { month: 'short', year: 'numeric' });
-  }
-
-  // ── Render ─────────────────────────────────────────────────────────────
-  function render() {
-    const { opps, totalPipeline, ytdMeetings, avgMonthly,
-            pipelineByStage, meetingsByMonth, growthByMonth,
-            monthsSorted, growthSorted } = compute();
-
-    // KPIs
-    document.getElementById('kpi-pipeline').textContent    = fmt$(totalPipeline);
-    document.getElementById('kpi-pipeline-sub').textContent = fmtFull$(totalPipeline);
-    document.getElementById('kpi-deals').textContent       = opps.length.toLocaleString();
-    document.getElementById('kpi-meetings').textContent    = ytdMeetings.toLocaleString();
-    document.getElementById('kpi-meetings-sub').textContent = `${avgMonthly} avg / month`;
-
-    // ── Meetings chart ───────────────────────────────────────────────────
-    const mLabels = monthsSorted.map(monthLabel);
-    const mValues = monthsSorted.map(m => meetingsByMonth[m]);
-    if (meetingsChart) {
-      meetingsChart.data.labels = mLabels;
-      meetingsChart.data.datasets[0].data = mValues;
-      meetingsChart.update();
-    } else {
-      meetingsChart = new Chart(document.getElementById('meetingsChart'), {
-        type: 'bar',
-        plugins: [makeMomPlugin('momLabels')],
-        data: { labels: mLabels, datasets: [{ label: 'Meetings', data: mValues, backgroundColor: '#4361ee', borderRadius: 4, borderSkipped: false }] },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          layout: { padding: { top: 20 } },
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-            y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f0f4f8' } }
-          }
-        }
-      });
     }
-
-    // ── Stage donut ──────────────────────────────────────────────────────
-    const pStages  = STAGE_ORDER.filter(s => pipelineByStage[s].count > 0);
-    const pValues  = pStages.map(s => pipelineByStage[s].value);
-    const pColors  = pStages.map((_, i) => STAGE_COLORS[i % STAGE_COLORS.length]);
-    if (stageChart) {
-      stageChart.data.labels = pStages;
-      stageChart.data.datasets[0].data = pValues;
-      stageChart.data.datasets[0].backgroundColor = pColors;
-      stageChart.update();
-    } else {
-      stageChart = new Chart(document.getElementById('stageChart'), {
-        type: 'doughnut',
-        data: { labels: pStages, datasets: [{ data: pValues, backgroundColor: pColors, borderWidth: 2, borderColor: '#fff' }] },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          cutout: '60%',
-          plugins: {
-            legend: { position: 'right', labels: { font: { size: 11 }, padding: 12, boxWidth: 12 } },
-            tooltip: { callbacks: { label: ctx => ` ${fmtFull$(ctx.raw)}  (${ctx.label})` } }
-          }
-        }
-      });
-    }
-
-    // ── Growth chart ─────────────────────────────────────────────────────
-    const gLabels = growthSorted.map(monthLabel);
-    const gCounts = growthSorted.map(m => growthByMonth[m].count);
-    if (growthChart) {
-      growthChart.data.labels = gLabels;
-      growthChart.data.datasets[0].data = gCounts;
-      growthChart.update();
-    } else {
-      growthChart = new Chart(document.getElementById('growthChart'), {
-        type: 'bar',
-        plugins: [makeMomPlugin('growthMomLabels')],
-        data: {
-          labels: gLabels,
-          datasets: [{
-            type: 'bar', label: 'New Deals', data: gCounts,
-            backgroundColor: '#4361ee', borderRadius: 4
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          layout: { padding: { top: 20 } },
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-            y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f0f4f8' } }
-          }
-        }
-      });
-    }
-
-    // ── Stage table ──────────────────────────────────────────────────────
-    const tbody = document.getElementById('stage-tbody');
-    tbody.innerHTML = '';
-    let totalVal = 0, totalCount = 0;
-    pStages.forEach((s, i) => {
-      const d = pipelineByStage[s];
-      totalVal += d.value; totalCount += d.count;
-      const avg = d.count ? Math.round(d.value / d.count) : 0;
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><span class="stage-dot" style="background:${pColors[i]}"></span>${s}</td>
-        <td>${d.count}</td>
-        <td>${fmtFull$(d.value)}</td>
-        <td>${fmtFull$(avg)}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-    const tfoot = document.getElementById('stage-tfoot');
-    const totalAvg = totalCount ? Math.round(totalVal / totalCount) : 0;
-    tfoot.innerHTML = `<tr><td>Total</td><td>${totalCount}</td><td>${fmtFull$(totalVal)}</td><td>${fmtFull$(totalAvg)}</td></tr>`;
-  }
-
-  render();
+  });
 })();
 </script>
 </body>
