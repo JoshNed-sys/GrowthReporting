@@ -78,6 +78,9 @@
   document.getElementById('kpi-avg').textContent = 'Avg ' + D.summary.avgMonthlyMeetings + '/mo';
 
   // MTD: last entry in pipelineGrowth
+  const growth = D.pipelineGrowth || [];
+  if (growth.length > 0) {
+    const mtd = growth[growth.length - 1];
  const mtd = growth[growth.length - 1];
 const prev = growth[growth.length - 2];
 const momPct = prev && prev.value > 0
