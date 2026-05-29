@@ -14,10 +14,10 @@ window.DASHBOARD_DATA = {
     { "month": "Sep 2026", "meetings": 1 }
   ],
   "pipelineByStage": [
-    { "stage": "Qualify",   "value": 462000, "count": 23 },
-    { "stage": "Explore",   "value": 665400, "count": 21 },
-    { "stage": "Propose",   "value": 544200, "count": 21 },
-    { "stage": "Negotiate", "value": 84000,  "count": 2  }
+    { "stage": "Qualify",   "value": 526200, "count": 25 },
+    { "stage": "Explore",   "value": 695400, "count": 22 },
+    { "stage": "Propose",   "value": 712200, "count": 25 },
+    { "stage": "Negotiate", "value": 178200, "count": 4  }
   ],
   "pipelineGrowth": [
     { "month": "Feb 2026", "count": 142, "value": 3956400 },
@@ -26,9 +26,9 @@ window.DASHBOARD_DATA = {
     { "month": "May 2026", "count": 19,  "value": 441600  }
   ],
   "summary": {
-    "totalOpenPipelineValue": 1755600,
-    "totalOpenOpportunities": 67,
-    "presaleAccounts": 766,
+    "totalOpenPipelineValue": 2112000,
+    "totalOpenOpportunities": 76,
+    "pipelineAccounts": 59,
     "ytdMeetings": 70,
     "avgMonthlyMeetings": 8.8
   }
