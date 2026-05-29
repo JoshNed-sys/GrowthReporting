@@ -9,9 +9,6 @@ window.DASHBOARD_DATA = {
     { "month": "Mar 2026", "meetings": 10 },
     { "month": "Apr 2026", "meetings": 14 },
     { "month": "May 2026", "meetings": 26 },
-    { "month": "Jun 2026", "meetings": 3 },
-    { "month": "Jul 2026", "meetings": 1 },
-    { "month": "Sep 2026", "meetings": 1 }
   ],
   "pipelineByStage": [
     { "stage": "Qualify",   "value": 526200, "count": 25 },
