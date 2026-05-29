@@ -31,9 +31,8 @@ except ImportError:
 # Config
 # ---------------------------------------------------------------------------
 FISCAL_YEAR = date.today().year
-FY_START = f"{FISCAL_YEAR}-01-01T00:00:00Z"
 PIPELINE_STAGES = {'Qualify', 'Explore', 'Propose', 'Negotiate', 'Nurture'}
-STAGE_ORDER = ["Qualify", "Explore", "Active", "Propose", "Negotiate", "Demo Platform Configuration"]
+STAGE_ORDER = ["Qualify", "Explore", "Propose", "Negotiate", "Nurture"]
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -43,11 +42,10 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 toolset = ComposioToolSet()
 
 def soql(query: str) -> list[dict]:
-  # Account IDs with active pipeline (derived from stage)
-presale_rows = soql(
-    f"SELECT AccountId FROM Opportunity WHERE StageName IN ('Qualify','Explore','Propose','Negotiate','Nurture') AND AccountId != null LIMIT 2000"
-)
-presale_acct_ids = {r["AccountId"] for r in presale_rows if r.get("AccountId")}
+    """Run a SOQL query via Composio and return records list."""
+    result = toolset.execute_action(
+        action="SALESFORCE_RUN_SOQL_QUERY",
+        params={"query": query},
     )
     if result.get("error"):
         raise RuntimeError(f"SOQL error: {result['error']}\nQuery: {query}")
@@ -58,22 +56,27 @@ presale_acct_ids = {r["AccountId"] for r in presale_rows if r.get("AccountId")}
 # ---------------------------------------------------------------------------
 print("Pulling Salesforce data...")
 
-# 1. Pre-sale account IDs — defined by RecordType.Name = 'Pre Sale'
-presale_rows = soql(
-    "SELECT Id FROM Account WHERE RecordType.Name = 'Pre Sale' LIMIT 2000"
-)
-presale_acct_ids = {r["Id"] for r in presale_rows if r.get("Id")}
-print(f"  Pre-sale accounts (RecordType): {len(presale_acct_ids)}")
-
-# 2. Opportunities this fiscal year
+# 1. Opportunities in pipeline stages (all time)
 opps = soql(
+    "SELECT Id, StageName, Amount, CreatedDate, AccountId "
+    "FROM Opportunity "
+    "WHERE StageName IN ('Qualify','Explore','Propose','Negotiate','Nurture') "
+    "AND AccountId != null LIMIT 2000"
+)
+print(f"  Open pipeline opps: {len(opps)}")
+
+# 2. Account IDs with active pipeline (for meeting filter)
+pipeline_acct_ids = {o["AccountId"] for o in opps if o.get("AccountId")}
+
+# 3. All opps (for growth chart — new pipeline created this FY)
+all_opps = soql(
     f"SELECT Id, StageName, Amount, CreatedDate, AccountId "
     f"FROM Opportunity "
-    f"WHERE AccountId != null LIMIT 2000"
+    f"WHERE CreatedDate >= {FISCAL_YEAR}-01-01T00:00:00Z AND AccountId != null LIMIT 2000"
 )
-print(f"  Opportunities (FY{FISCAL_YEAR}): {len(opps)}")
+print(f"  All opps FY{FISCAL_YEAR}: {len(all_opps)}")
 
-# 3. Events this fiscal year
+# 4. Events this fiscal year (on pipeline accounts)
 events = soql(
     f"SELECT Id, ActivityDate, AccountId "
     f"FROM Event "
@@ -85,25 +88,25 @@ print(f"  Events: {len(events)}")
 # ---------------------------------------------------------------------------
 # Compute metrics
 # ---------------------------------------------------------------------------
-# Pipeline by stage, growth, and meetings — pre-sale accounts only (RecordType)
 pipeline_by_stage: dict[str, dict] = defaultdict(lambda: {"value": 0.0, "count": 0})
 growth_by_month:   dict[str, dict] = defaultdict(lambda: {"count": 0, "value": 0.0})
 meetings_by_month: dict[str, int]  = defaultdict(int)
 
 for o in opps:
-    if o.get("AccountId") not in presale_acct_ids:
-        continue
     stage = o.get("StageName", "")
+    pipeline_by_stage[stage]["count"] += 1
+    pipeline_by_stage[stage]["value"] += o.get("Amount") or 0.0
+
+for o in all_opps:
+    if o.get("StageName") not in PIPELINE_STAGES:
+        continue
     month = (o.get("CreatedDate") or "")[:7]
     if month:
         growth_by_month[month]["count"] += 1
         growth_by_month[month]["value"] += o.get("Amount") or 0.0
-  if stage in PIPELINE_STAGES:
-        pipeline_by_stage[stage]["count"] += 1
-        pipeline_by_stage[stage]["value"] += o.get("Amount") or 0.0
 
 for e in events:
-    if e.get("AccountId") not in presale_acct_ids:
+    if e.get("AccountId") not in pipeline_acct_ids:
         continue
     d = e.get("ActivityDate", "")
     if d:
@@ -119,28 +122,23 @@ avg_monthly = round(ytd_meetings / months_with_meetings, 1) if months_with_meeti
 # ---------------------------------------------------------------------------
 # Build data.js
 # ---------------------------------------------------------------------------
-months_sorted = sorted(meetings_by_month.keys())
-
 def month_label(ym: str) -> str:
-    """'2026-03' -> 'Mar 2026'"""
-    dt = datetime.strptime(ym, "%Y-%m")
-    return dt.strftime("%b %Y")
+    return datetime.strptime(ym, "%Y-%m").strftime("%b %Y")
 
 meetings_list = [
     {"month": month_label(m), "meetings": meetings_by_month[m]}
-    for m in months_sorted
+    for m in sorted(meetings_by_month)
 ]
 
 pipeline_list = []
 for s in STAGE_ORDER:
     if s in pipeline_by_stage:
         d = pipeline_by_stage[s]
-        label = "Demo Config" if s == "Demo Platform Configuration" else s
-        pipeline_list.append({"stage": label, "value": int(d["value"]), "count": d["count"]})
+        pipeline_list.append({"stage": s, "value": int(d["value"]), "count": d["count"]})
 
 growth_list = [
     {"month": month_label(m), "count": growth_by_month[m]["count"], "value": int(growth_by_month[m]["value"])}
-    for m in sorted(growth_by_month.keys())
+    for m in sorted(growth_by_month)
 ]
 
 output = {
@@ -152,7 +150,7 @@ output = {
     "summary": {
         "totalOpenPipelineValue": int(total_pipeline),
         "totalOpenOpportunities": total_open_opps,
-        "presaleAccounts": len(presale_acct_ids),  # accounts with RecordType = 'Pre Sale'
+        "pipelineAccounts": len(pipeline_acct_ids),
         "ytdMeetings": ytd_meetings,
         "avgMonthlyMeetings": avg_monthly,
     },
@@ -170,6 +168,5 @@ with open(out_path, "w") as f:
 
 print(f"\nDone! data.js updated.")
 print(f"  Pipeline: ${total_pipeline:,.0f} across {total_open_opps} open deals")
-print(f"  Pre-sale accounts: {len(presale_acct_ids)}")
 print(f"  YTD meetings: {ytd_meetings}")
 print(f"\nTo publish: git add data.js && git commit -m 'refresh: {date.today()}' && git push")
