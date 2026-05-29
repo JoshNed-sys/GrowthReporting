@@ -17,7 +17,6 @@ window.DASHBOARD_DATA = {
     { "stage": "Negotiate", "value": 178200, "count": 4  }
   ],
   "pipelineGrowth": [
-    { "month": "Feb 2026", "count": 142, "value": 3956400 },
     { "month": "Mar 2026", "count": 4,   "value": 106800  },
     { "month": "Apr 2026", "count": 5,   "value": 134400  },
     { "month": "May 2026", "count": 19,  "value": 441600  }
