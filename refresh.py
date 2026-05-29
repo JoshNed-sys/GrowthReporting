@@ -32,7 +32,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 FISCAL_YEAR = date.today().year
 FY_START = f"{FISCAL_YEAR}-01-01T00:00:00Z"
-CLOSED_STAGES = {'Closed Won', 'Closed Lost', 'Void', 'Unresponsive'}
+PIPELINE_STAGES = {'Qualify', 'Explore', 'Propose', 'Negotiate', 'Nurture'}
 STAGE_ORDER = ["Qualify", "Explore", "Active", "Propose", "Negotiate", "Demo Platform Configuration"]
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -43,10 +43,11 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 toolset = ComposioToolSet()
 
 def soql(query: str) -> list[dict]:
-    """Run a SOQL query via Composio and return records list."""
-    result = toolset.execute_action(
-        action="SALESFORCE_RUN_SOQL_QUERY",
-        params={"query": query},
+  # Account IDs with active pipeline (derived from stage)
+presale_rows = soql(
+    f"SELECT AccountId FROM Opportunity WHERE StageName IN ('Qualify','Explore','Propose','Negotiate','Nurture') AND AccountId != null LIMIT 2000"
+)
+presale_acct_ids = {r["AccountId"] for r in presale_rows if r.get("AccountId")}
     )
     if result.get("error"):
         raise RuntimeError(f"SOQL error: {result['error']}\nQuery: {query}")
@@ -97,7 +98,7 @@ for o in opps:
     if month:
         growth_by_month[month]["count"] += 1
         growth_by_month[month]["value"] += o.get("Amount") or 0.0
-    if stage not in CLOSED_STAGES:
+  if stage in PIPELINE_STAGES:
         pipeline_by_stage[stage]["count"] += 1
         pipeline_by_stage[stage]["value"] += o.get("Amount") or 0.0
 
