@@ -61,11 +61,18 @@
   </div>
 </div>
 
-<script src="data.js"></script>
 <script>
-(function () {
-  const D = window.DASHBOARD_DATA;
-  if (!D) { document.body.innerHTML = '<p style="padding:2rem;color:red">data.js not loaded</p>'; return; }
+(async function () {
+  let D;
+  try {
+    const res = await fetch('/api/data');
+    if (!res.ok) throw new Error('API error ' + res.status);
+    D = await res.json();
+    if (D.error) throw new Error(D.error);
+  } catch (e) {
+    document.body.innerHTML = '<p style="padding:2rem;color:red">Failed to load data: ' + e.message + '</p>';
+    return;
+  }
 
   // Header date
   document.getElementById('generated-date').textContent = 'Updated ' + D.generated;
@@ -215,7 +222,9 @@
       }
     }
   });
-})();
+})().catch(e => {
+  document.body.innerHTML = '<p style="padding:2rem;color:red">Error: ' + e.message + '</p>';
+});
 </script>
 </body>
 </html>
