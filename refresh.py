@@ -111,7 +111,7 @@ for e in events:
     d = e.get("ActivityDate", "")
     if d:
         meetings_by_month[d[:7]] += 1
-        current_month = date.today().strftime("%Y-%m")
+    current_month = date.today().strftime("%Y-%m")
 meetings_by_month = {k: v for k, v in meetings_by_month.items() if k <= current_month}
 
 # Summaries
