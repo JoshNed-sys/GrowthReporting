@@ -75,8 +75,8 @@ module.exports = async (req, res) => {
 
     // 2. Events this FY on accounts with open pipeline opps
     const events = await soql(
-     `SELECT Id, ActivityDate, AccountId FROM Event WHERE ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} AND AccountId IN (SELECT AccountId FROM Opportunity WHERE StageName IN (${stagesCsv}) AND AccountId != null) LIMIT 2000`
-;
+ `SELECT Id, ActivityDate, AccountId FROM Event WHERE ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} AND AccountId IN (SELECT AccountId FROM Opportunity WHERE StageName IN (${stagesCsv}) AND AccountId != null AND IsClosed = false) LIMIT 2000`
+      };
 
     // 4. Closed won + lost this FY
     const closedOpps = await soql(
