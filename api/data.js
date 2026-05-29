@@ -6,48 +6,38 @@ const https = require('https');
 const PIPELINE_STAGES = ['Qualify', 'Explore', 'Propose', 'Negotiate', 'Nurture'];
 const FISCAL_YEAR = new Date().getFullYear();
 
-// ── Salesforce auth (SOAP login — no connected app needed) ───────────────────
+// ── Salesforce auth (OAuth 2.0 client credentials flow) ─────────────────────
 
 async function sfLogin() {
-  const username = process.env.SF_USERNAME;
-  const password = process.env.SF_PASSWORD + (process.env.SF_SECURITY_TOKEN || '');
-
-  const soapBody = `<?xml version="1.0" encoding="utf-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-  xmlns:urn="urn:partner.soap.sforce.com">
-  <soapenv:Body>
-    <urn:login>
-      <urn:username>${username}</urn:username>
-      <urn:password>${password}</urn:password>
-    </urn:login>
-  </soapenv:Body>
-</soapenv:Envelope>`;
+  const params = new URLSearchParams({
+    grant_type: 'password',
+    client_id: process.env.SF_CLIENT_ID,
+    client_secret: process.env.SF_CLIENT_SECRET,
+    username: process.env.SF_USERNAME,
+    password: process.env.SF_PASSWORD + (process.env.SF_SECURITY_TOKEN || ''),
+  });
+  const body = params.toString();
 
   return new Promise((resolve, reject) => {
     const req = https.request({
       hostname: 'login.salesforce.com',
-      path: '/services/Soap/u/59.0',
+      path: '/services/oauth2/token',
       method: 'POST',
       headers: {
-        'Content-Type': 'text/xml',
-        'SOAPAction': 'login',
-        'Content-Length': Buffer.byteLength(soapBody),
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(body),
       },
     }, res => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
-        const sessionMatch = data.match(/<sessionId>(.*?)<\/sessionId>/);
-        const urlMatch = data.match(/<serverUrl>(.*?)<\/serverUrl>/);
-        const faultMatch = data.match(/<faultstring>(.*?)<\/faultstring>/);
-        if (faultMatch) return reject(new Error(faultMatch[1]));
-        if (!sessionMatch) return reject(new Error('Login failed: no session id'));
-        const instanceUrl = urlMatch[1].match(/https:\/\/[^/]+/)[0];
-        resolve({ access_token: sessionMatch[1], instance_url: instanceUrl });
+        const json = JSON.parse(data);
+        if (json.error) return reject(new Error(json.error + ': ' + json.error_description));
+        resolve({ access_token: json.access_token, instance_url: json.instance_url });
       });
     });
     req.on('error', reject);
-    req.write(soapBody);
+    req.write(body);
     req.end();
   });
 }
