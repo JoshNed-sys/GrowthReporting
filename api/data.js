@@ -73,10 +73,18 @@ module.exports = async (req, res) => {
       `SELECT Id, StageName, Amount, CreatedDate, AccountId FROM Opportunity WHERE StageName IN (${stagesCsv}) AND AccountId != null LIMIT 2000`
     );
 
-    // 2. Events this FY on accounts with open pipeline opps
+    // 2. Accounts with open pipeline opps
+    const openAccounts = await soql(
+      `SELECT AccountId FROM Opportunity WHERE StageName IN (${stagesCsv}) AND AccountId != null LIMIT 2000`
+    );
+    const openAccountIdsCsv = openAccounts.length
+      ? [...new Set(openAccounts.map(o => o.AccountId))].map(id => `'${id}'`).join(',')
+      : "'NONE'";
+
+    // 3. Events this FY on those accounts
     const events = await soql(
- `SELECT Id, ActivityDate, AccountId FROM Event WHERE ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} AND AccountId IN (SELECT AccountId FROM Opportunity WHERE StageName IN (${stagesCsv}) AND AccountId != null AND IsClosed = false) LIMIT 2000`
-      };
+      `SELECT Id, ActivityDate, AccountId FROM Event WHERE ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} AND AccountId IN (${openAccountIdsCsv}) LIMIT 2000`
+    );
 
     // 4. Closed won + lost this FY
     const closedOpps = await soql(
