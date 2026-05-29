@@ -171,9 +171,9 @@
       <div class="sub">active opportunities</div>
     </div>
     <div class="kpi">
-      <div class="label">Pre-Sale Accounts</div>
+      <div class="label">Accounts w/ Pipeline</div>
       <div class="value" id="kpi-accounts">—</div>
-      <div class="sub">RecordType = Pre Sale</div>
+      <div class="sub">active pipeline accounts</div>
     </div>
     <div class="kpi">
       <div class="label">YTD Meetings</div>
@@ -236,7 +236,7 @@
   document.getElementById('kpi-pipeline').textContent = fmt$(S.totalOpenPipelineValue);
   document.getElementById('kpi-pipeline-sub').textContent = fmtFull$(S.totalOpenPipelineValue);
   document.getElementById('kpi-deals').textContent = S.totalOpenOpportunities.toLocaleString();
-  document.getElementById('kpi-accounts').textContent = S.presaleAccounts.toLocaleString();
+  document.getElementById('kpi-accounts').textContent = S.pipelineAccounts.toLocaleString();
   document.getElementById('kpi-meetings').textContent = S.ytdMeetings.toLocaleString();
   document.getElementById('kpi-meetings-sub').textContent = `${S.avgMonthlyMeetings} avg / month`;
 
@@ -391,7 +391,7 @@
 
   // Footer
   document.getElementById('footer').textContent =
-    `Data source: Salesforce · Pre-sale accounts defined by RecordType = "Pre Sale" · FY${D.fiscalYear}`;
+    `Data source: Salesforce · Pipeline stages: Qualify, Explore, Propose, Negotiate, Nurture · FY${D.fiscalYear}`;
 })();
 </script>
 </body>
