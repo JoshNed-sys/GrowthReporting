@@ -74,9 +74,9 @@ module.exports = async (req, res) => {
     );
 
     // 2. Events this FY (past months only)
-    const events = await soql(
- `SELECT Id, ActivityDate, AccountId FROM Event WHERE ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} AND Account.RecordType.Name = 'Pre Sale' AND AccountId IN (SELECT AccountId FROM Opportunity WHERE StageName IN (${stagesCsv}) AND AccountId != null AND IsClosed = false) LIMIT 2000`
-;
+   const events = await soql(
+  `SELECT Id, ActivityDate, AccountId FROM Event WHERE ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} AND AccountId IN (SELECT AccountId FROM Opportunity WHERE StageName NOT IN ('Closed Won','Closed Lost') AND AccountId != null) LIMIT 2000`
+);
 
     // 3. Closed won + lost this FY
     const closedOpps = await soql(
