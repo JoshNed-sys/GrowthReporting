@@ -26,7 +26,7 @@ window.DASHBOARD_DATA = {
     "totalOpenPipelineValue": 2112000,
     "totalOpenOpportunities": 76,
     "pipelineAccounts": 59,
-    "ytdMeetings": 70,
+    "ytdMeetings": 65,
     "avgMonthlyMeetings": 8.8
   }
 };
