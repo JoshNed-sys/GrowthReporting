@@ -48,7 +48,7 @@
 
 <div class="charts">
   <div class="card">
-    <h2>Pipeline by Stage</h2>
+    <h2>Pipeline Funnel</h2>
     <canvas id="stageChart"></canvas>
   </div>
   <div class="card">
@@ -77,7 +77,7 @@
   document.getElementById('kpi-meetings').textContent = D.summary.ytdMeetings;
   document.getElementById('kpi-avg').textContent = 'Avg ' + D.summary.avgMonthlyMeetings + '/mo';
 
- // MTD: last entry in pipelineGrowth
+  // MTD: last entry in pipelineGrowth
   const growth = D.pipelineGrowth || [];
   if (growth.length > 0) {
     const mtd = growth[growth.length - 1];
@@ -114,30 +114,56 @@
     }
   };
 
-  // Stage chart (doughnut)
-  const stageData = D.pipelineByStage;
-  const stageColors = ['#6366f1','#22d3ee','#f59e0b','#f43f5e'];
+  // Stage funnel (horizontal bar, centered)
+  const stageData = D.pipelineByStage.slice().reverse(); // Negotiate → Qualify top to bottom
+  const maxVal = Math.max(...stageData.map(s => s.value));
+  const offsets = stageData.map(s => (maxVal - s.value) / 2);
+  const stageColors = ['#f43f5e','#f59e0b','#22d3ee','#6366f1'].slice(0, stageData.length);
   new Chart(document.getElementById('stageChart'), {
-    type: 'doughnut',
+    type: 'bar',
     data: {
       labels: stageData.map(s => s.stage),
-      datasets: [{
-        data: stageData.map(s => s.value),
-        backgroundColor: stageColors,
-        borderWidth: 2,
-        borderColor: '#fff'
-      }]
+      datasets: [
+        {
+          data: offsets,
+          backgroundColor: 'transparent',
+          borderColor: 'transparent',
+          borderWidth: 0,
+          hoverBackgroundColor: 'transparent',
+        },
+        {
+          data: stageData.map(s => s.value),
+          backgroundColor: stageColors,
+          borderRadius: 4,
+          borderSkipped: false,
+        }
+      ]
     },
     options: {
+      indexAxis: 'y',
       plugins: {
-        legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } },
+        legend: { display: false },
         tooltip: {
           callbacks: {
             label: ctx => {
+              if (ctx.datasetIndex === 0) return null;
               const d = stageData[ctx.dataIndex];
-              return ` ${d.stage}: ${fmt(d.value)} (${d.count} opps)`;
+              return ` ${fmt(d.value)} · ${d.count} opps`;
             }
-          }
+          },
+          filter: item => item.datasetIndex === 1
+        }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          display: false,
+          grid: { display: false }
+        },
+        y: {
+          stacked: true,
+          grid: { display: false },
+          ticks: { font: { size: 12 } }
         }
       }
     }
