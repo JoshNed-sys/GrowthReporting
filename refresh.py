@@ -104,6 +104,7 @@ for o in all_opps:
     if month:
         growth_by_month[month]["count"] += 1
         growth_by_month[month]["value"] += o.get("Amount") or 0.0
+        growth_by_month.pop(f"{FISCAL_YEAR}-02", None)
 
 for e in events:
     if e.get("AccountId") not in pipeline_acct_ids:
