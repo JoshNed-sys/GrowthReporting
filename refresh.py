@@ -32,7 +32,6 @@ except ImportError:
 # ---------------------------------------------------------------------------
 FISCAL_YEAR = date.today().year
 PIPELINE_STAGES = {'Qualify', 'Explore', 'Propose', 'Negotiate', 'Nurture'}
-STAGE_ORDER = ["Qualify", "Explore", "Propose", "Negotiate", "Nurture"]
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -56,113 +55,102 @@ def soql(query: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 print("Pulling Salesforce data...")
 
-# 1. Opportunities in pipeline stages (all time)
-opps = soql(
-    "SELECT Id, StageName, Amount, CreatedDate, AccountId "
+# 1. Open pipeline opps with owner
+raw_opps = soql(
+    "SELECT Id, StageName, Amount, CreatedDate, AccountId, Owner.Name "
     "FROM Opportunity "
     "WHERE StageName IN ('Qualify','Explore','Propose','Negotiate','Nurture') "
     "AND AccountId != null LIMIT 2000"
 )
-print(f"  Open pipeline opps: {len(opps)}")
+print(f"  Open pipeline opps: {len(raw_opps)}")
 
-# 2. Account IDs with active pipeline (for meeting filter)
-pipeline_acct_ids = {o["AccountId"] for o in opps if o.get("AccountId")}
-
-# 3. All opps (for growth chart — new pipeline created this FY)
-all_opps = soql(
-    f"SELECT Id, StageName, Amount, CreatedDate, AccountId "
+# 2. All opps this FY (for growth chart)
+raw_all_opps = soql(
+    f"SELECT Id, StageName, Amount, CreatedDate, AccountId, Owner.Name "
     f"FROM Opportunity "
-    f"WHERE CreatedDate >= {FISCAL_YEAR}-01-01T00:00:00Z AND AccountId != null LIMIT 2000"
+    f"WHERE CreatedDate >= {FISCAL_YEAR}-01-01T00:00:00Z "
+    f"AND StageName IN ('Qualify','Explore','Propose','Negotiate','Nurture') "
+    f"AND AccountId != null LIMIT 2000"
 )
-print(f"  All opps FY{FISCAL_YEAR}: {len(all_opps)}")
+print(f"  FY{FISCAL_YEAR} pipeline opps: {len(raw_all_opps)}")
 
-# 4. Events this fiscal year (on pipeline accounts)
-events = soql(
-    f"SELECT Id, ActivityDate, AccountId "
+# 3. Events this FY with owner
+raw_events = soql(
+    f"SELECT Id, ActivityDate, AccountId, Owner.Name "
     f"FROM Event "
     f"WHERE ActivityDate >= {FISCAL_YEAR}-01-01 AND ActivityDate <= {FISCAL_YEAR}-12-31 "
     f"AND AccountId != null LIMIT 2000"
 )
-print(f"  Events: {len(events)}")
+print(f"  Events: {len(raw_events)}")
 
 # ---------------------------------------------------------------------------
-# Compute metrics
+# Shape records
 # ---------------------------------------------------------------------------
-pipeline_by_stage: dict[str, dict] = defaultdict(lambda: {"value": 0.0, "count": 0})
-growth_by_month:   dict[str, dict] = defaultdict(lambda: {"count": 0, "value": 0.0})
-meetings_by_month: dict[str, int]  = defaultdict(int)
+def owner_name(rec):
+    o = rec.get("Owner")
+    if isinstance(o, dict):
+        return o.get("Name", "Unknown")
+    return "Unknown"
 
-for o in opps:
-    stage = o.get("StageName", "")
-    pipeline_by_stage[stage]["count"] += 1
-    pipeline_by_stage[stage]["value"] += o.get("Amount") or 0.0
+opps = [
+    {
+        "id": r["Id"],
+        "stage": r.get("StageName", ""),
+        "amount": r.get("Amount") or 0,
+        "createdDate": (r.get("CreatedDate") or "")[:10],
+        "accountId": r.get("AccountId", ""),
+        "ownerName": owner_name(r),
+    }
+    for r in raw_opps
+]
 
-for o in all_opps:
-    if o.get("StageName") not in PIPELINE_STAGES:
-        continue
-    month = (o.get("CreatedDate") or "")[:7]
-    if month:
-        growth_by_month[month]["count"] += 1
-        growth_by_month[month]["value"] += o.get("Amount") or 0.0
-        growth_by_month.pop(f"{FISCAL_YEAR}-02", None)
+all_opps = [
+    {
+        "id": r["Id"],
+        "stage": r.get("StageName", ""),
+        "amount": r.get("Amount") or 0,
+        "createdDate": (r.get("CreatedDate") or "")[:10],
+        "accountId": r.get("AccountId", ""),
+        "ownerName": owner_name(r),
+    }
+    for r in raw_all_opps
+]
 
-for e in events:
-    if e.get("AccountId") not in pipeline_acct_ids:
-        continue
-    d = e.get("ActivityDate", "")
-    if d:
-        meetings_by_month[d[:7]] += 1
-    current_month = date.today().strftime("%Y-%m")
-meetings_by_month = {k: v for k, v in meetings_by_month.items() if k <= current_month}
+# Remove Feb from growth (new seller ramp distorts the trend)
+all_opps = [o for o in all_opps if not o["createdDate"].startswith(f"{FISCAL_YEAR}-02")]
 
-# Summaries
-total_pipeline  = sum(v["value"] for v in pipeline_by_stage.values())
-total_open_opps = sum(v["count"] for v in pipeline_by_stage.values())
-ytd_meetings    = sum(meetings_by_month.values())
-months_with_meetings = len([v for v in meetings_by_month.values() if v > 0])
-avg_monthly = round(ytd_meetings / months_with_meetings, 1) if months_with_meetings else 0
+events = [
+    {
+        "id": r["Id"],
+        "activityDate": r.get("ActivityDate", ""),
+        "accountId": r.get("AccountId", ""),
+        "ownerName": owner_name(r),
+    }
+    for r in raw_events
+]
+
+# Filter events to future months out
+current_month = date.today().strftime("%Y-%m")
+events = [e for e in events if (e["activityDate"] or "")[:7] <= current_month]
+
+owners = sorted({o["ownerName"] for o in opps} | {e["ownerName"] for e in events})
 
 # ---------------------------------------------------------------------------
 # Build data.js
 # ---------------------------------------------------------------------------
-def month_label(ym: str) -> str:
-    return datetime.strptime(ym, "%Y-%m").strftime("%b %Y")
-
-meetings_list = [
-    {"month": month_label(m), "meetings": meetings_by_month[m]}
-    for m in sorted(meetings_by_month)
-]
-
-pipeline_list = []
-for s in STAGE_ORDER:
-    if s in pipeline_by_stage:
-        d = pipeline_by_stage[s]
-        pipeline_list.append({"stage": s, "value": int(d["value"]), "count": d["count"]})
-
-growth_list = [
-    {"month": month_label(m), "count": growth_by_month[m]["count"], "value": int(growth_by_month[m]["value"])}
-    for m in sorted(growth_by_month)
-]
-
 output = {
     "generated": date.today().isoformat(),
     "fiscalYear": FISCAL_YEAR,
-    "meetingsPerMonth": meetings_list,
-    "pipelineByStage": pipeline_list,
-    "pipelineGrowth": growth_list,
-    "summary": {
-        "totalOpenPipelineValue": int(total_pipeline),
-        "totalOpenOpportunities": total_open_opps,
-        "pipelineAccounts": len(pipeline_acct_ids),
-        "ytdMeetings": ytd_meetings,
-        "avgMonthlyMeetings": avg_monthly,
-    },
+    "owners": owners,
+    "opps": opps,
+    "allOpps": all_opps,
+    "events": events,
 }
 
 js_content = (
     "// Auto-generated by refresh.py — do not edit manually\n"
     f"// Last updated: {date.today().isoformat()}\n"
-    "window.DASHBOARD_DATA = " + json.dumps(output, indent=2) + ";\n"
+    "window.DASHBOARD_DATA = " + json.dumps(output) + ";\n"
 )
 
 out_path = os.path.join(SCRIPT_DIR, "data.js")
@@ -170,6 +158,6 @@ with open(out_path, "w") as f:
     f.write(js_content)
 
 print(f"\nDone! data.js updated.")
-print(f"  Pipeline: ${total_pipeline:,.0f} across {total_open_opps} open deals")
-print(f"  YTD meetings: {ytd_meetings}")
+print(f"  Open pipeline opps: {len(opps)}")
+print(f"  Owners: {', '.join(owners)}")
 print(f"\nTo publish: git add data.js && git commit -m 'refresh: {date.today()}' && git push")
