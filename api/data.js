@@ -12,6 +12,7 @@ async function soql(query) {
   const body = JSON.stringify({
     action: 'SALESFORCE_RUN_SOQL_QUERY',
     input: { query },
+    connectedAccountId: 'ca_Wr5FgPsREVL3',
   });
 
   return new Promise((resolve, reject) => {
@@ -30,11 +31,11 @@ async function soql(query) {
       res.on('end', () => {
         try {
           const json = JSON.parse(data);
-          if (json.error) return reject(new Error(json.error));
+          if (json.error) return reject(new Error(typeof json.error === 'string' ? json.error : JSON.stringify(json.error)));
           const records = json?.data?.records || json?.response?.data?.records || [];
           resolve(records);
         } catch (e) {
-          reject(new Error('Failed to parse Composio response: ' + data.slice(0, 200)));
+          reject(new Error('Failed to parse Composio response: ' + data.slice(0, 300)));
         }
       });
     });
