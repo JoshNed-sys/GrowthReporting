@@ -28,6 +28,36 @@
 
   .container { max-width: 1200px; margin: 0 auto; padding: 28px 24px; }
 
+  /* Owner filter */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+    align-items: center;
+  }
+  .filter-bar .filter-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #718096;
+    margin-right: 4px;
+  }
+  .chip {
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: #4a5568;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .chip:hover { border-color: #4361ee; color: #4361ee; }
+  .chip.active { background: #4361ee; border-color: #4361ee; color: #fff; font-weight: 600; }
+
   /* KPI row */
   .kpi-row {
     display: grid;
@@ -158,6 +188,12 @@
 </header>
 
 <div class="container">
+
+  <!-- Owner filter -->
+  <div class="filter-bar" id="filter-bar">
+    <span class="filter-label">Owner</span>
+  </div>
+
   <!-- KPIs -->
   <div class="kpi-row">
     <div class="kpi">
@@ -219,216 +255,263 @@
   const D = window.DASHBOARD_DATA;
   if (!D) { document.body.innerHTML = '<p style="padding:40px;color:red">data.js not loaded.</p>'; return; }
 
-  const S = D.summary;
-  const fmt$ = v => '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v.toLocaleString());
+  const fmt$    = v => '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v.toLocaleString());
   const fmtFull$ = v => '$' + Math.round(v).toLocaleString();
 
+  const STAGE_ORDER  = ['Qualify','Explore','Propose','Negotiate','Nurture'];
+  const STAGE_COLORS = ['#4361ee','#3a0ca3','#7209b7','#f72585','#e85d04'];
+
   // Header
-  document.getElementById('hdr-meta').textContent =
-    `FY${D.fiscalYear} · Updated ${D.generated}`;
-
-  // KPIs
-  document.getElementById('kpi-pipeline').textContent = fmt$(S.totalOpenPipelineValue);
-  document.getElementById('kpi-pipeline-sub').textContent = fmtFull$(S.totalOpenPipelineValue);
-  document.getElementById('kpi-deals').textContent = S.totalOpenOpportunities.toLocaleString();
-  document.getElementById('kpi-meetings').textContent = S.ytdMeetings.toLocaleString();
-  document.getElementById('kpi-meetings-sub').textContent = `${S.avgMonthlyMeetings} avg / month`;
-
-  // ── Palette ────────────────────────────────────────────────────────────
-  const STAGE_COLORS = [
-    '#4361ee','#3a0ca3','#7209b7','#f72585','#e85d04','#48cae4'
-  ];
-
-  // ── Meetings bar ───────────────────────────────────────────────────────
-  const mData = D.meetingsPerMonth;
-  const momLabels = mData.map((d, i) => {
-    if (i === 0) return '';
-    const prev = mData[i - 1].meetings;
-    if (!prev) return '';
-    const pct = Math.round(((d.meetings - prev) / prev) * 100);
-    return (pct >= 0 ? '+' : '') + pct + '%';
-  });
-  const momPlugin = {
-    id: 'momLabels',
-    afterDatasetsDraw(chart) {
-      const { ctx, data } = chart;
-      const dataset = chart.getDatasetMeta(0).data;
-      dataset.forEach((bar, i) => {
-        const label = momLabels[i];
-        if (!label) return;
-        const pct = parseInt(label);
-        ctx.save();
-        ctx.font = 'bold 10px sans-serif';
-        ctx.fillStyle = pct >= 0 ? '#38a169' : '#e53e3e';
-        ctx.textAlign = 'center';
-        ctx.fillText(label, bar.x, bar.y - 6);
-        ctx.restore();
-      });
-    }
-  };
-  new Chart(document.getElementById('meetingsChart'), {
-    type: 'bar',
-    plugins: [momPlugin],
-    data: {
-      labels: mData.map(d => d.month),
-      datasets: [{
-        label: 'Meetings',
-        data: mData.map(d => d.meetings),
-        backgroundColor: '#4361ee',
-        borderRadius: 4,
-        borderSkipped: false
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      layout: { padding: { top: 20 } },
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f0f4f8' } }
-      }
-    }
-  });
-
-  // ── Pipeline donut ─────────────────────────────────────────────────────
-  const pData = D.pipelineByStage;
-  new Chart(document.getElementById('stageChart'), {
-    type: 'doughnut',
-    data: {
-      labels: pData.map(d => d.stage),
-      datasets: [{
-        data: pData.map(d => d.value),
-        backgroundColor: STAGE_COLORS.slice(0, pData.length),
-        borderWidth: 2,
-        borderColor: '#fff'
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      cutout: '60%',
-      plugins: {
-        legend: {
-          position: 'right',
-          labels: { font: { size: 11 }, padding: 12, boxWidth: 12 }
-        },
-        tooltip: {
-          callbacks: {
-            label: ctx => ` ${fmtFull$(ctx.raw)}  (${ctx.label})`
-          }
-        }
-      }
-    }
-  });
-
-  // ── Growth combo ───────────────────────────────────────────────────────
- const gData = D.pipelineGrowth;
-  const gMomLabels = gData.map((d, i) => {
-    if (i === 0) return '';
-    const prev = gData[i - 1].count;
-    if (!prev) return '';
-    const pct = Math.round(((d.count - prev) / prev) * 100);
-    return (pct >= 0 ? '+' : '') + pct + '%';
-  });
-  const growthMomPlugin = {
-    id: 'growthMomLabels',
-    afterDatasetsDraw(chart) {
-      const { ctx } = chart;
-      const meta = chart.getDatasetMeta(0).data;
-      meta.forEach((bar, i) => {
-        const label = gMomLabels[i];
-        if (!label) return;
-        const pct = parseInt(label);
-        ctx.save();
-        ctx.font = 'bold 10px sans-serif';
-        ctx.fillStyle = pct >= 0 ? '#38a169' : '#e53e3e';
-        ctx.textAlign = 'center';
-        ctx.fillText(label, bar.x, bar.y - 6);
-        ctx.restore();
-      });
-    }
-  };
-  new Chart(document.getElementById('growthChart'), {
-    type: 'bar',
-    plugins: [growthMomPlugin],
-    data: {
-      labels: gData.map(d => d.month),
-      datasets: [
-        {
-          type: 'bar',
-          label: 'New Deals',
-          data: gData.map(d => d.count),
-          backgroundColor: '#4361ee',
-          borderRadius: 4,
-          yAxisID: 'yCount'
-        },
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      layout: { padding: { top: 20 } },
-      interaction: { mode: 'index' },
-      plugins: {
-        legend: { labels: { font: { size: 11 }, boxWidth: 12 } },
-        tooltip: {
-          callbacks: {
-            label: ctx => ctx.dataset.yAxisID === 'yValue'
-              ? ` ${ctx.dataset.label}: ${fmtFull$(ctx.raw)}`
-              : ` ${ctx.dataset.label}: ${ctx.raw}`
-          }
-        }
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-        yCount: {
-          position: 'left',
-          beginAtZero: true,
-          ticks: { precision: 0, font: { size: 11 } },
-          grid: { color: '#f0f4f8' },
-          title: { display: true, text: 'Deals', font: { size: 10 }, color: '#718096' }
-        },
-        yValue: {
-          position: 'right',
-          beginAtZero: true,
-          grid: { display: false },
-          ticks: {
-            font: { size: 11 },
-            callback: v => v >= 1e6 ? '$'+(v/1e6).toFixed(1)+'M' : v >= 1e3 ? '$'+(v/1e3).toFixed(0)+'K' : '$'+v
-          },
-          title: { display: true, text: 'Value', font: { size: 10 }, color: '#718096' }
-        }
-      }
-    }
-  });
-
-  // ── Stage table ────────────────────────────────────────────────────────
-  const tbody = document.getElementById('stage-tbody');
-  let totalVal = 0, totalCount = 0;
-  pData.forEach((d, i) => {
-    totalVal += d.value; totalCount += d.count;
-    const avg = d.count ? Math.round(d.value / d.count) : 0;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><span class="stage-dot" style="background:${STAGE_COLORS[i % STAGE_COLORS.length]}"></span>${d.stage}</td>
-      <td>${d.count}</td>
-      <td>${fmtFull$(d.value)}</td>
-      <td>${fmtFull$(avg)}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-  const tfoot = document.getElementById('stage-tfoot');
-  const totalAvg = totalCount ? Math.round(totalVal / totalCount) : 0;
-  tfoot.innerHTML = `
-    <tr>
-      <td>Total</td>
-      <td>${totalCount}</td>
-      <td>${fmtFull$(totalVal)}</td>
-      <td>${fmtFull$(totalAvg)}</td>
-    </tr>
-  `;
-
-  // Footer
+  document.getElementById('hdr-meta').textContent = `FY${D.fiscalYear} · Updated ${D.generated}`;
   document.getElementById('footer').textContent =
     `Data source: Salesforce · Pipeline stages: Qualify, Explore, Propose, Negotiate, Nurture · FY${D.fiscalYear}`;
+
+  // ── Owner filter chips ─────────────────────────────────────────────────
+  const selectedOwners = new Set(); // empty = all
+  const filterBar = document.getElementById('filter-bar');
+
+  // "All" chip
+  const allChip = document.createElement('span');
+  allChip.className = 'chip active';
+  allChip.textContent = 'All';
+  allChip.addEventListener('click', () => {
+    selectedOwners.clear();
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    allChip.classList.add('active');
+    render();
+  });
+  filterBar.appendChild(allChip);
+
+  // Per-owner chips
+  (D.owners || []).forEach(owner => {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.textContent = owner;
+    chip.addEventListener('click', () => {
+      allChip.classList.remove('active');
+      if (selectedOwners.has(owner)) {
+        selectedOwners.delete(owner);
+        chip.classList.remove('active');
+      } else {
+        selectedOwners.add(owner);
+        chip.classList.add('active');
+      }
+      if (selectedOwners.size === 0) {
+        allChip.classList.add('active');
+      }
+      render();
+    });
+    filterBar.appendChild(chip);
+  });
+
+  // ── Chart instances ────────────────────────────────────────────────────
+  let meetingsChart, stageChart, growthChart;
+
+  // ── MoM label plugin factory ───────────────────────────────────────────
+  function makeMomPlugin(id) {
+    return {
+      id,
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        const vals = chart.getDatasetMeta(0).data;
+        const rawData = chart.data.datasets[0].data;
+        vals.forEach((bar, i) => {
+          if (i === 0) return;
+          const prev = rawData[i - 1];
+          if (!prev) return;
+          const pct = Math.round(((rawData[i] - prev) / prev) * 100);
+          const label = (pct >= 0 ? '+' : '') + pct + '%';
+          ctx.save();
+          ctx.font = 'bold 10px sans-serif';
+          ctx.fillStyle = pct >= 0 ? '#38a169' : '#e53e3e';
+          ctx.textAlign = 'center';
+          ctx.fillText(label, bar.x, bar.y - 6);
+          ctx.restore();
+        });
+      }
+    };
+  }
+
+  // ── Compute metrics from raw data ──────────────────────────────────────
+  function compute() {
+    const filterActive = selectedOwners.size > 0;
+
+    // Filter opps
+    const opps = filterActive
+      ? D.opps.filter(o => selectedOwners.has(o.ownerName))
+      : D.opps;
+
+    // Account IDs from filtered opps (for meeting filter)
+    const acctIds = new Set(opps.map(o => o.accountId));
+
+    // Filter events by matching account IDs
+    const events = D.events.filter(e => acctIds.has(e.accountId));
+
+    // Pipeline by stage
+    const pipelineByStage = {};
+    STAGE_ORDER.forEach(s => { pipelineByStage[s] = { value: 0, count: 0 }; });
+    opps.forEach(o => {
+      if (pipelineByStage[o.stage]) {
+        pipelineByStage[o.stage].count++;
+        pipelineByStage[o.stage].value += o.amount;
+      }
+    });
+
+    // Meetings by month
+    const meetingsByMonth = {};
+    events.forEach(e => {
+      const m = (e.activityDate || '').slice(0, 7);
+      if (m) meetingsByMonth[m] = (meetingsByMonth[m] || 0) + 1;
+    });
+
+    // Growth by month (allOpps filtered by owner)
+    const growthOpps = filterActive
+      ? (D.allOpps || []).filter(o => selectedOwners.has(o.ownerName))
+      : (D.allOpps || []);
+    const growthByMonth = {};
+    growthOpps.forEach(o => {
+      const m = (o.createdDate || '').slice(0, 7);
+      if (!m) return;
+      if (!growthByMonth[m]) growthByMonth[m] = { count: 0, value: 0 };
+      growthByMonth[m].count++;
+      growthByMonth[m].value += o.amount;
+    });
+
+    // Summaries
+    const totalPipeline = opps.reduce((s, o) => s + o.amount, 0);
+    const ytdMeetings   = Object.values(meetingsByMonth).reduce((s, v) => s + v, 0);
+    const monthsW       = Object.values(meetingsByMonth).filter(v => v > 0).length;
+    const avgMonthly    = monthsW ? Math.round(ytdMeetings / monthsW * 10) / 10 : 0;
+
+    const monthsSorted  = Object.keys(meetingsByMonth).sort();
+    const growthSorted  = Object.keys(growthByMonth).sort();
+
+    return {
+      opps, totalPipeline, ytdMeetings, avgMonthly,
+      pipelineByStage, meetingsByMonth, growthByMonth,
+      monthsSorted, growthSorted,
+    };
+  }
+
+  function monthLabel(ym) {
+    const [y, m] = ym.split('-');
+    return new Date(+y, +m - 1, 1).toLocaleString('default', { month: 'short', year: 'numeric' });
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────
+  function render() {
+    const { opps, totalPipeline, ytdMeetings, avgMonthly,
+            pipelineByStage, meetingsByMonth, growthByMonth,
+            monthsSorted, growthSorted } = compute();
+
+    // KPIs
+    document.getElementById('kpi-pipeline').textContent    = fmt$(totalPipeline);
+    document.getElementById('kpi-pipeline-sub').textContent = fmtFull$(totalPipeline);
+    document.getElementById('kpi-deals').textContent       = opps.length.toLocaleString();
+    document.getElementById('kpi-meetings').textContent    = ytdMeetings.toLocaleString();
+    document.getElementById('kpi-meetings-sub').textContent = `${avgMonthly} avg / month`;
+
+    // ── Meetings chart ───────────────────────────────────────────────────
+    const mLabels = monthsSorted.map(monthLabel);
+    const mValues = monthsSorted.map(m => meetingsByMonth[m]);
+    if (meetingsChart) {
+      meetingsChart.data.labels = mLabels;
+      meetingsChart.data.datasets[0].data = mValues;
+      meetingsChart.update();
+    } else {
+      meetingsChart = new Chart(document.getElementById('meetingsChart'), {
+        type: 'bar',
+        plugins: [makeMomPlugin('momLabels')],
+        data: { labels: mLabels, datasets: [{ label: 'Meetings', data: mValues, backgroundColor: '#4361ee', borderRadius: 4, borderSkipped: false }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          layout: { padding: { top: 20 } },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+            y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f0f4f8' } }
+          }
+        }
+      });
+    }
+
+    // ── Stage donut ──────────────────────────────────────────────────────
+    const pStages  = STAGE_ORDER.filter(s => pipelineByStage[s].count > 0);
+    const pValues  = pStages.map(s => pipelineByStage[s].value);
+    const pColors  = pStages.map((_, i) => STAGE_COLORS[i % STAGE_COLORS.length]);
+    if (stageChart) {
+      stageChart.data.labels = pStages;
+      stageChart.data.datasets[0].data = pValues;
+      stageChart.data.datasets[0].backgroundColor = pColors;
+      stageChart.update();
+    } else {
+      stageChart = new Chart(document.getElementById('stageChart'), {
+        type: 'doughnut',
+        data: { labels: pStages, datasets: [{ data: pValues, backgroundColor: pColors, borderWidth: 2, borderColor: '#fff' }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          cutout: '60%',
+          plugins: {
+            legend: { position: 'right', labels: { font: { size: 11 }, padding: 12, boxWidth: 12 } },
+            tooltip: { callbacks: { label: ctx => ` ${fmtFull$(ctx.raw)}  (${ctx.label})` } }
+          }
+        }
+      });
+    }
+
+    // ── Growth chart ─────────────────────────────────────────────────────
+    const gLabels = growthSorted.map(monthLabel);
+    const gCounts = growthSorted.map(m => growthByMonth[m].count);
+    if (growthChart) {
+      growthChart.data.labels = gLabels;
+      growthChart.data.datasets[0].data = gCounts;
+      growthChart.update();
+    } else {
+      growthChart = new Chart(document.getElementById('growthChart'), {
+        type: 'bar',
+        plugins: [makeMomPlugin('growthMomLabels')],
+        data: {
+          labels: gLabels,
+          datasets: [{
+            type: 'bar', label: 'New Deals', data: gCounts,
+            backgroundColor: '#4361ee', borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          layout: { padding: { top: 20 } },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+            y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f0f4f8' } }
+          }
+        }
+      });
+    }
+
+    // ── Stage table ──────────────────────────────────────────────────────
+    const tbody = document.getElementById('stage-tbody');
+    tbody.innerHTML = '';
+    let totalVal = 0, totalCount = 0;
+    pStages.forEach((s, i) => {
+      const d = pipelineByStage[s];
+      totalVal += d.value; totalCount += d.count;
+      const avg = d.count ? Math.round(d.value / d.count) : 0;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><span class="stage-dot" style="background:${pColors[i]}"></span>${s}</td>
+        <td>${d.count}</td>
+        <td>${fmtFull$(d.value)}</td>
+        <td>${fmtFull$(avg)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    const tfoot = document.getElementById('stage-tfoot');
+    const totalAvg = totalCount ? Math.round(totalVal / totalCount) : 0;
+    tfoot.innerHTML = `<tr><td>Total</td><td>${totalCount}</td><td>${fmtFull$(totalVal)}</td><td>${fmtFull$(totalAvg)}</td></tr>`;
+  }
+
+  render();
 })();
 </script>
 </body>
