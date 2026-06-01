@@ -48,7 +48,7 @@ async function soql(query) {
 
 const MONTHLY_REVENUE_GOAL = 83000;
 const ANNUAL_REVENUE_GOAL = 750000;
-const QB_BASE = 'quickbooks.api.intuit.com'; // use sandbox.api.intuit.com for sandbox
+const QB_BASE = 'sandbox-quickbooks.api.intuit.com';
 
 async function qbRequest(path, accessToken, realmId) {
   return new Promise((resolve, reject) => {
