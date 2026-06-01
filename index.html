@@ -28,6 +28,10 @@
   .progress-fill { height: 100%; border-radius: 6px; background: #6366f1; transition: width .4s; }
   .progress-fill.green { background: #16a34a; }
   .kpi-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 32px 0; }
+  .kpi-row4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 16px 32px 0; }
+  .section-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #aaa; padding: 20px 32px 0; }
+  .kpi.pending .value { color: #ccc; }
+  .kpi.pending .sub { color: #ddd; }
 </style>
 </head>
 <body>
@@ -36,7 +40,8 @@
   <span id="generated-date"></span>
 </header>
 
-<div class="kpi-row2" id="revenue-section" style="display:none">
+<div class="section-label">Revenue</div>
+<div class="kpi-row4" id="revenue-section" style="display:none">
   <div class="kpi">
     <div class="label">Monthly Revenue</div>
     <div class="value" id="kpi-monthly-rev">—</div>
@@ -49,8 +54,19 @@
     <div class="sub" id="kpi-annual-goal"></div>
     <div class="progress-bar"><div class="progress-fill green" id="annual-bar" style="width:0%"></div></div>
   </div>
+  <div class="kpi">
+    <div class="label">Closed Won Revenue (YTD)</div>
+    <div class="value" id="kpi-closed-won">—</div>
+    <div class="sub" id="kpi-closed-won-count"></div>
+  </div>
+  <div class="kpi">
+    <div class="label">Average Deal Size</div>
+    <div class="value" id="kpi-avg-deal">—</div>
+    <div class="sub">Closed won deals</div>
+  </div>
 </div>
 
+<div class="section-label">Pipeline</div>
 <div class="kpis">
   <div class="kpi">
     <div class="label">Open Pipeline Value</div>
@@ -58,14 +74,38 @@
     <div class="sub" id="kpi-opps"></div>
   </div>
   <div class="kpi">
-    <div class="label">YTD Meetings</div>
-    <div class="value" id="kpi-meetings">—</div>
-    <div class="sub" id="kpi-avg"></div>
+    <div class="label">Pipeline Coverage Ratio</div>
+    <div class="value" id="kpi-coverage">—</div>
+    <div class="sub">vs 3x target</div>
   </div>
   <div class="kpi">
     <div class="label">New Pipeline (MTD)</div>
     <div class="value" id="kpi-mtd">—</div>
     <div class="sub" id="kpi-mtd-count"></div>
+  </div>
+</div>
+
+<div class="section-label">Efficiency</div>
+<div class="kpi-row4">
+  <div class="kpi">
+    <div class="label">YTD Meetings</div>
+    <div class="value" id="kpi-meetings">—</div>
+    <div class="sub" id="kpi-avg"></div>
+  </div>
+  <div class="kpi pending">
+    <div class="label">Lead-to-Account Conversion</div>
+    <div class="value">—</div>
+    <div class="sub">Coming soon</div>
+  </div>
+  <div class="kpi pending">
+    <div class="label">Account-to-Opportunity Rate</div>
+    <div class="value">—</div>
+    <div class="sub">Coming soon</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Win Rate</div>
+    <div class="value" id="kpi-win-rate">—</div>
+    <div class="sub" id="kpi-win-rate-sub"></div>
   </div>
 </div>
 
@@ -122,8 +162,32 @@ async function loadDashboard(owner) {
     document.getElementById('kpi-annual-goal').textContent = `${r.annualPct}% of ${fmt(r.annualGoal)} goal`;
     document.getElementById('annual-bar').style.width = Math.min(r.annualPct, 100) + '%';
   }
+
+  // Pipeline KPIs
   document.getElementById('kpi-pipeline').textContent = fmt(D.summary.totalOpenPipelineValue);
   document.getElementById('kpi-opps').textContent = D.summary.totalOpenOpportunities + ' open opportunities';
+  document.getElementById('kpi-mtd').textContent; // set below in MTD block
+
+  // Pipeline coverage (open pipeline / quota — quota TBD)
+  const QUOTA = 750000;
+  const coverage = (D.summary.totalOpenPipelineValue / QUOTA).toFixed(1);
+  document.getElementById('kpi-coverage').textContent = coverage + 'x';
+
+  // Closed won + avg deal size
+  if (D.summary.closedWonValue !== undefined) {
+    document.getElementById('kpi-closed-won').textContent = fmt(D.summary.closedWonValue);
+    document.getElementById('kpi-closed-won-count').textContent = (D.summary.closedWonCount || 0) + ' deals closed';
+    const avgDeal = D.summary.closedWonCount > 0 ? D.summary.closedWonValue / D.summary.closedWonCount : 0;
+    document.getElementById('kpi-avg-deal').textContent = avgDeal > 0 ? fmt(avgDeal) : '—';
+  }
+
+  // Win rate
+  if (D.summary.winRate !== null && D.summary.winRate !== undefined) {
+    document.getElementById('kpi-win-rate').textContent = D.summary.winRate + '%';
+    document.getElementById('kpi-win-rate-sub').textContent = (D.summary.closedWonCount || 0) + ' won this FY';
+  }
+
+  // Efficiency KPIs
   document.getElementById('kpi-meetings').textContent = D.summary.ytdMeetings;
   document.getElementById('kpi-avg').textContent = 'Avg ' + D.summary.avgMonthlyMeetings + '/mo';
 
