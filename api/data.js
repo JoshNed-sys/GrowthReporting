@@ -98,12 +98,13 @@ async function qbRefreshToken() {
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         try {
+          if (!data) return reject(new Error(`QB token empty response, status=${res.statusCode}, headers=${JSON.stringify(res.headers).slice(0,200)}`));
           const json = JSON.parse(data);
           if (json.error) return reject(new Error('QB auth error: ' + json.error + ' - ' + json.error_description));
-          if (!json.access_token) return reject(new Error('QB: no access_token in response: ' + data.slice(0, 200)));
+          if (!json.access_token) return reject(new Error('QB: no access_token: ' + data.slice(0, 200)));
           resolve(json.access_token);
         } catch (e) {
-          reject(new Error('QB token parse error: ' + data.slice(0, 200)));
+          reject(new Error('QB token parse error [' + res.statusCode + ']: ' + data.slice(0, 300)));
         }
       });
     });
