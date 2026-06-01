@@ -20,6 +20,14 @@
   .card { background: #fff; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
   .card h2 { font-size: .85rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #888; margin-bottom: 16px; }
   canvas { max-height: 260px; }
+  .filters { display: flex; gap: 8px; padding: 16px 32px 0; flex-wrap: wrap; }
+  .chip { padding: 6px 16px; border-radius: 20px; border: 1.5px solid #ddd; background: #fff; font-size: .8rem; font-weight: 600; cursor: pointer; color: #555; transition: all .15s; }
+  .chip:hover { border-color: #6366f1; color: #6366f1; }
+  .chip.active { background: #6366f1; border-color: #6366f1; color: #fff; }
+  .progress-bar { background: #f0f0f0; border-radius: 6px; height: 8px; margin-top: 10px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 6px; background: #6366f1; transition: width .4s; }
+  .progress-fill.green { background: #16a34a; }
+  .kpi-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 32px 0; }
 </style>
 </head>
 <body>
@@ -27,6 +35,12 @@
   <h1>Sales Dashboard</h1>
   <span id="generated-date"></span>
 </header>
+<div class="filters">
+  <button class="chip active" data-owner="">All</button>
+  <button class="chip" data-owner="Miles Henderson">Miles Henderson</button>
+  <button class="chip" data-owner="Mark Traverson">Mark Traverson</button>
+  <button class="chip" data-owner="David Silverstein">David Silverstein</button>
+</div>
 
 <div class="kpis">
   <div class="kpi">
@@ -46,6 +60,21 @@
   </div>
 </div>
 
+<div class="kpi-row2" id="revenue-section" style="display:none">
+  <div class="kpi">
+    <div class="label">Monthly Revenue</div>
+    <div class="value" id="kpi-monthly-rev">—</div>
+    <div class="sub" id="kpi-monthly-goal"></div>
+    <div class="progress-bar"><div class="progress-fill" id="monthly-bar" style="width:0%"></div></div>
+  </div>
+  <div class="kpi">
+    <div class="label">Annual Revenue (YTD)</div>
+    <div class="value" id="kpi-annual-rev">—</div>
+    <div class="sub" id="kpi-annual-goal"></div>
+    <div class="progress-bar"><div class="progress-fill green" id="annual-bar" style="width:0%"></div></div>
+  </div>
+</div>
+
 <div class="charts">
   <div class="card">
     <h2>Pipeline Funnel</h2>
@@ -62,10 +91,18 @@
 </div>
 
 <script>
-(async function () {
+let currentOwner = '';
+let chartInstances = [];
+
+async function loadDashboard(owner) {
+  // Destroy existing charts
+  chartInstances.forEach(c => c.destroy());
+  chartInstances = [];
+
   let D;
   try {
-    const res = await fetch('/api/data');
+    const url = owner ? `/api/data?owner=${encodeURIComponent(owner)}` : '/api/data';
+    const res = await fetch(url);
     if (!res.ok) throw new Error('API error ' + res.status);
     D = await res.json();
     if (D.error) throw new Error(D.error);
@@ -79,6 +116,18 @@
 
   // KPIs
   const fmt = v => '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'K');
+
+  // Revenue KPIs
+  if (D.revenue) {
+    document.getElementById('revenue-section').style.display = 'grid';
+    const r = D.revenue;
+    document.getElementById('kpi-monthly-rev').textContent = fmt(r.currentMonthRevenue);
+    document.getElementById('kpi-monthly-goal').textContent = `${r.monthlyPct}% of ${fmt(r.monthlyGoal)} goal`;
+    document.getElementById('monthly-bar').style.width = Math.min(r.monthlyPct, 100) + '%';
+    document.getElementById('kpi-annual-rev').textContent = fmt(r.ytdRevenue);
+    document.getElementById('kpi-annual-goal').textContent = `${r.annualPct}% of ${fmt(r.annualGoal)} goal`;
+    document.getElementById('annual-bar').style.width = Math.min(r.annualPct, 100) + '%';
+  }
   document.getElementById('kpi-pipeline').textContent = fmt(D.summary.totalOpenPipelineValue);
   document.getElementById('kpi-opps').textContent = D.summary.totalOpenOpportunities + ' open opportunities';
   document.getElementById('kpi-meetings').textContent = D.summary.ytdMeetings;
@@ -122,11 +171,11 @@
   };
 
   // Stage funnel (horizontal bar, centered)
-  const stageData = D.pipelineByStage; // Qualify → Negotiate top to bottom
+  const stageData = (D.pipelineByStage || []); // Qualify → Negotiate top to bottom
   const maxVal = Math.max(...stageData.map(s => s.value));
   const offsets = stageData.map(s => (maxVal - s.value) / 2);
   const stageColors = ['#6366f1','#22d3ee','#f59e0b','#f43f5e'].slice(0, stageData.length);
-  new Chart(document.getElementById('stageChart'), {
+  chartInstances.push(new Chart(document.getElementById('stageChart'), {
     type: 'bar',
     data: {
       labels: stageData.map(s => s.stage),
@@ -174,11 +223,11 @@
         }
       }
     }
-  });
+  }));
 
   // Meetings chart (bar)
   const mData = D.meetingsPerMonth;
-  new Chart(document.getElementById('meetingsChart'), {
+  chartInstances.push(new Chart(document.getElementById('meetingsChart'), {
     type: 'bar',
     plugins: [momPlugin],
     data: {
@@ -195,11 +244,11 @@
       plugins: { legend: { display: false } },
       scales: { y: { beginAtZero: true, ticks: { stepSize: 5 } } }
     }
-  });
+  }));
 
   // Growth chart (bar)
   const gData = D.pipelineGrowth;
-  new Chart(document.getElementById('growthChart'), {
+  chartInstances.push(new Chart(document.getElementById('growthChart'), {
     type: 'bar',
     plugins: [momPlugin],
     data: {
@@ -221,10 +270,21 @@
         }
       }
     }
+  }));
+}
+
+// Wire up filter chips
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    currentOwner = chip.dataset.owner;
+    loadDashboard(currentOwner);
   });
-})().catch(e => {
-  document.body.innerHTML = '<p style="padding:2rem;color:red">Error: ' + e.message + '</p>';
 });
+
+// Initial load
+loadDashboard('');
 </script>
 </body>
 </html>
