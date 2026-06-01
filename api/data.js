@@ -6,6 +6,22 @@ const https = require('https');
 const PIPELINE_STAGES = ['Qualify', 'Explore', 'Propose', 'Negotiate', 'Nurture'];
 const FISCAL_YEAR = new Date().getFullYear();
 
+// ── Revenue config (update manually each month until Stripe is connected) ────
+// Last updated: 2026-06-01
+const REVENUE = {
+  monthlyGoal: 83000,
+  annualGoal: 750000,
+  // Monthly revenue — update the current month each month
+  monthly: [
+    { month: 'Jan 2026', revenue: 20000 },
+    { month: 'Feb 2026', revenue: 20000 },
+    { month: 'Mar 2026', revenue: 20000 },
+    { month: 'Apr 2026', revenue: 38250 },
+    { month: 'May 2026', revenue: 26000 },
+    // Add new months here
+  ],
+};
+
 // ── Composio SOQL helper ─────────────────────────────────────────────────────
 
 async function soql(query) {
@@ -213,8 +229,18 @@ module.exports = async (req, res) => {
       `SELECT Id, ActivityDate, AccountId FROM Event WHERE ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} AND AccountId IN (${openAccountIdsCsv})${eventOwnerFilter} LIMIT 2000`
     );
 
-    // 4. QuickBooks revenue (runs in parallel with Salesforce queries)
-    const qbRevenuePromise = getQBRevenue(FISCAL_YEAR);
+    // 4. Revenue from config (swap for Stripe later)
+    const currentMonthRevenue = REVENUE.monthly.length ? REVENUE.monthly[REVENUE.monthly.length - 1].revenue : 0;
+    const ytdRevenue = REVENUE.monthly.reduce((a, m) => a + m.revenue, 0);
+    const qbRevenuePromise = Promise.resolve({
+      monthlyRevenue: REVENUE.monthly,
+      ytdRevenue,
+      currentMonthRevenue,
+      monthlyGoal: REVENUE.monthlyGoal,
+      annualGoal: REVENUE.annualGoal,
+      monthlyPct: Math.round((currentMonthRevenue / REVENUE.monthlyGoal) * 100),
+      annualPct: Math.round((ytdRevenue / REVENUE.annualGoal) * 100),
+    });
 
     // 5. Closed won + lost this FY
     const closedOpps = await soql(
