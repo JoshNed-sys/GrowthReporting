@@ -17,7 +17,7 @@ const REVENUE = {
     { month: 'Feb 2026', revenue: 20000 },
     { month: 'Mar 2026', revenue: 20000 },
     { month: 'Apr 2026', revenue: 38250 },
-    { month: 'May 2026', revenue: 26000 },
+    { month: 'May 2026', revenue: 30470 },
     // Add new months here
   ],
 };
@@ -231,7 +231,7 @@ module.exports = async (req, res) => {
 
     // 4. Revenue from config (swap for Stripe later)
     const currentMonthRevenue = REVENUE.monthly.length ? REVENUE.monthly[REVENUE.monthly.length - 1].revenue : 0;
-    const ytdRevenue = REVENUE.monthly.reduce((a, m) => a + m.revenue, 0);
+    const ytdRevenue = 124250; // Hardcoded YTD gross revenue — update manually each month
     const qbRevenuePromise = Promise.resolve({
       monthlyRevenue: REVENUE.monthly,
       ytdRevenue,
