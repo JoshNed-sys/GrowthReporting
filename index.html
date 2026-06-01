@@ -35,11 +35,20 @@
   <h1>Sales Dashboard</h1>
   <span id="generated-date"></span>
 </header>
-<div class="filters">
-  <button class="chip active" data-owner="">All</button>
-  <button class="chip" data-owner="Miles Henderson">Miles Henderson</button>
-  <button class="chip" data-owner="Mark Traverson">Mark Traverson</button>
-  <button class="chip" data-owner="David Silverstein">David Silverstein</button>
+
+<div class="kpi-row2" id="revenue-section" style="display:none">
+  <div class="kpi">
+    <div class="label">Monthly Revenue</div>
+    <div class="value" id="kpi-monthly-rev">—</div>
+    <div class="sub" id="kpi-monthly-goal"></div>
+    <div class="progress-bar"><div class="progress-fill" id="monthly-bar" style="width:0%"></div></div>
+  </div>
+  <div class="kpi">
+    <div class="label">Annual Revenue (YTD)</div>
+    <div class="value" id="kpi-annual-rev">—</div>
+    <div class="sub" id="kpi-annual-goal"></div>
+    <div class="progress-bar"><div class="progress-fill green" id="annual-bar" style="width:0%"></div></div>
+  </div>
 </div>
 
 <div class="kpis">
@@ -57,21 +66,6 @@
     <div class="label">New Pipeline (MTD)</div>
     <div class="value" id="kpi-mtd">—</div>
     <div class="sub" id="kpi-mtd-count"></div>
-  </div>
-</div>
-
-<div class="kpi-row2" id="revenue-section" style="display:none">
-  <div class="kpi">
-    <div class="label">Monthly Revenue</div>
-    <div class="value" id="kpi-monthly-rev">—</div>
-    <div class="sub" id="kpi-monthly-goal"></div>
-    <div class="progress-bar"><div class="progress-fill" id="monthly-bar" style="width:0%"></div></div>
-  </div>
-  <div class="kpi">
-    <div class="label">Annual Revenue (YTD)</div>
-    <div class="value" id="kpi-annual-rev">—</div>
-    <div class="sub" id="kpi-annual-goal"></div>
-    <div class="progress-bar"><div class="progress-fill green" id="annual-bar" style="width:0%"></div></div>
   </div>
 </div>
 
