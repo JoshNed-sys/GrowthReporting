@@ -86,7 +86,7 @@ async function qbRefreshToken() {
   return new Promise((resolve, reject) => {
     const req = https.request({
       hostname: 'oauth.platform.intuit.com',
-      path: '/op/v1/token',
+      path: '/oauth2/v1/tokens/bearer',
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
