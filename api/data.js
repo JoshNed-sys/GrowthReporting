@@ -117,8 +117,6 @@ async function qbRefreshToken() {
 async function getQBRevenue(fiscalYear) {
   try {
     const accessToken = await qbRefreshToken();
-    // Get realm ID from current company
-    const profile = await qbRequest('/companyinfo/v3/company', accessToken, process.env.QB_REALM_ID || '');
     const realmId = process.env.QB_REALM_ID;
     if (!realmId) throw new Error('QB_REALM_ID not set');
 
