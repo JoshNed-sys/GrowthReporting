@@ -64,8 +64,11 @@ async function qbRequest(path, accessToken, realmId) {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
-        try { resolve(JSON.parse(data)); }
-        catch (e) { reject(new Error('QB parse error: ' + data.slice(0, 200))); }
+        try {
+          const json = JSON.parse(data);
+          if (json.fault || json.Fault) return reject(new Error('QB API error: ' + JSON.stringify(json.fault || json.Fault).slice(0, 200)));
+          resolve(json);
+        } catch (e) { reject(new Error('QB parse error: ' + data.slice(0, 200))); }
       });
     });
     req.on('error', reject);
@@ -94,9 +97,14 @@ async function qbRefreshToken() {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
-        const json = JSON.parse(data);
-        if (json.error) return reject(new Error('QB auth error: ' + json.error));
-        resolve(json.access_token);
+        try {
+          const json = JSON.parse(data);
+          if (json.error) return reject(new Error('QB auth error: ' + json.error + ' - ' + json.error_description));
+          if (!json.access_token) return reject(new Error('QB: no access_token in response: ' + data.slice(0, 200)));
+          resolve(json.access_token);
+        } catch (e) {
+          reject(new Error('QB token parse error: ' + data.slice(0, 200)));
+        }
       });
     });
     req.on('error', reject);
