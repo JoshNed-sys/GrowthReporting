@@ -44,6 +44,121 @@ async function soql(query) {
   });
 }
 
+// ── QuickBooks auth + revenue ─────────────────────────────────────────────────
+
+const MONTHLY_REVENUE_GOAL = 83000;
+const ANNUAL_REVENUE_GOAL = 750000;
+const QB_BASE = 'quickbooks.api.intuit.com'; // use sandbox.api.intuit.com for sandbox
+
+async function qbRequest(path, accessToken, realmId) {
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: QB_BASE,
+      path: `/v3/company/${realmId}${path}`,
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer ' + accessToken,
+        'Accept': 'application/json',
+      },
+    }, res => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch (e) { reject(new Error('QB parse error: ' + data.slice(0, 200))); }
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+async function qbRefreshToken() {
+  const body = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: process.env.QB_REFRESH_TOKEN,
+  }).toString();
+  const auth = Buffer.from(`${process.env.QB_CLIENT_ID}:${process.env.QB_CLIENT_SECRET}`).toString('base64');
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'oauth.platform.intuit.com',
+      path: '/op/v1/token',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + auth,
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, res => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        const json = JSON.parse(data);
+        if (json.error) return reject(new Error('QB auth error: ' + json.error));
+        resolve(json.access_token);
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+async function getQBRevenue(fiscalYear) {
+  try {
+    const accessToken = await qbRefreshToken();
+    // Get realm ID from current company
+    const profile = await qbRequest('/companyinfo/v3/company', accessToken, process.env.QB_REALM_ID || '');
+    const realmId = process.env.QB_REALM_ID;
+    if (!realmId) throw new Error('QB_REALM_ID not set');
+
+    const startDate = `${fiscalYear}-01-01`;
+    const endDate = new Date().toISOString().slice(0, 10);
+    const report = await qbRequest(
+      `/reports/ProfitAndLoss?start_date=${startDate}&end_date=${endDate}&summarize_column_by=Month&accounting_method=Cash`,
+      accessToken,
+      realmId
+    );
+
+    // Parse columns (skip label column, get month columns)
+    const cols = report?.Columns?.Column || [];
+    const monthCols = cols.slice(1).filter(c => c.ColTitle && c.ColTitle !== 'TOTAL');
+
+    // Find Income/Total Income row
+    const rows = report?.Rows?.Row || [];
+    let incomeRow = null;
+    for (const row of rows) {
+      if (row.type === 'Section' && (row.Header?.ColData?.[0]?.value || '').toLowerCase().includes('income')) {
+        incomeRow = row.Summary?.ColData || [];
+        break;
+      }
+    }
+    if (!incomeRow) return null;
+
+    const monthlyRevenue = monthCols.map((col, i) => ({
+      month: col.ColTitle,
+      revenue: parseFloat(incomeRow[i + 1]?.value || '0') || 0,
+    })).filter(m => m.revenue > 0);
+
+    const ytdRevenue = monthlyRevenue.reduce((a, m) => a + m.revenue, 0);
+    const currentMonthRevenue = monthlyRevenue.length ? monthlyRevenue[monthlyRevenue.length - 1].revenue : 0;
+
+    return {
+      monthlyRevenue,
+      ytdRevenue,
+      currentMonthRevenue,
+      monthlyGoal: MONTHLY_REVENUE_GOAL,
+      annualGoal: ANNUAL_REVENUE_GOAL,
+      monthlyPct: Math.round((currentMonthRevenue / MONTHLY_REVENUE_GOAL) * 100),
+      annualPct: Math.round((ytdRevenue / ANNUAL_REVENUE_GOAL) * 100),
+    };
+  } catch (e) {
+    console.error('QB revenue error:', e.message);
+    return null;
+  }
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function monthLabel(dateStr) {
@@ -68,14 +183,19 @@ module.exports = async (req, res) => {
     const today = new Date().toISOString().slice(0, 10);
     const currentMonth = today.slice(0, 7);
 
+    // Owner filter (optional query param)
+    const owner = req.query && req.query.owner ? req.query.owner : null;
+    const ownerFilter = owner ? ` AND Owner.Name = '${owner}'` : '';
+    const eventOwnerFilter = owner ? ` AND Owner.Name = '${owner}'` : '';
+
     // 1. Open pipeline opps
     const opps = await soql(
-      `SELECT Id, StageName, Amount, CreatedDate, AccountId FROM Opportunity WHERE StageName IN (${stagesCsv}) AND AccountId != null LIMIT 2000`
+      `SELECT Id, StageName, Amount, CreatedDate, AccountId FROM Opportunity WHERE StageName IN (${stagesCsv}) AND AccountId != null${ownerFilter} LIMIT 2000`
     );
 
     // 2. Accounts with open pipeline opps
     const openAccounts = await soql(
-      `SELECT AccountId FROM Opportunity WHERE StageName IN (${stagesCsv}) AND AccountId != null LIMIT 2000`
+      `SELECT AccountId FROM Opportunity WHERE StageName IN (${stagesCsv}) AND AccountId != null${ownerFilter} LIMIT 2000`
     );
     const openAccountIdsCsv = openAccounts.length
       ? [...new Set(openAccounts.map(o => o.AccountId))].map(id => `'${id}'`).join(',')
@@ -83,10 +203,13 @@ module.exports = async (req, res) => {
 
     // 3. Events this FY on those accounts
     const events = await soql(
-      `SELECT Id, ActivityDate, AccountId FROM Event WHERE ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} AND AccountId IN (${openAccountIdsCsv}) LIMIT 2000`
+      `SELECT Id, ActivityDate, AccountId FROM Event WHERE ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} AND AccountId IN (${openAccountIdsCsv})${eventOwnerFilter} LIMIT 2000`
     );
 
-    // 4. Closed won + lost this FY
+    // 4. QuickBooks revenue (runs in parallel with Salesforce queries)
+    const qbRevenuePromise = getQBRevenue(FISCAL_YEAR);
+
+    // 5. Closed won + lost this FY
     const closedOpps = await soql(
       `SELECT Id, StageName, Amount, CloseDate FROM Opportunity WHERE StageName IN ('Closed Won', 'Closed Lost') AND CloseDate >= ${FISCAL_YEAR}-01-01 LIMIT 2000`
     );
@@ -141,6 +264,9 @@ module.exports = async (req, res) => {
       ? Math.round((ytdMeetings / meetingsPerMonth.length) * 10) / 10
       : 0;
 
+    // ── QuickBooks revenue (await the parallel promise) ──
+    const qbRevenue = await qbRevenuePromise;
+
     // ── Win rate ──
     const closedWon = closedOpps.filter(o => o.StageName === 'Closed Won');
     const winRate = closedOpps.length
@@ -154,6 +280,7 @@ module.exports = async (req, res) => {
       meetingsPerMonth,
       pipelineByStage,
       pipelineGrowth,
+      revenue: qbRevenue,
       summary: {
         totalOpenPipelineValue: totalPipelineValue,
         totalOpenOpportunities: totalOpenOpps,
