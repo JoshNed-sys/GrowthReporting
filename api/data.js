@@ -249,6 +249,12 @@ module.exports = async (req, res) => {
       `SELECT Id, StageName, IsWon, Amount, CloseDate FROM Opportunity WHERE IsClosed = true AND CloseDate >= ${FISCAL_YEAR}-01-01 AND CloseDate <= ${today}${ownerFilter} LIMIT 2000`
     );
 
+    // 5b. Total opportunities this FY — win-rate denominator (all opps, not just closed)
+    const allOppsThisYear = await soql(
+      `SELECT COUNT(Id) cnt FROM Opportunity WHERE CloseDate >= ${FISCAL_YEAR}-01-01 AND CloseDate <= ${FISCAL_YEAR}-12-31${ownerFilter}`
+    );
+    const totalOppsThisYear = allOppsThisYear.length ? (allOppsThisYear[0].cnt || 0) : 0;
+
     // ── Pipeline by stage ──
     const stageTotals = {};
     PIPELINE_STAGES.forEach(s => stageTotals[s] = { value: 0, count: 0 });
@@ -302,8 +308,9 @@ module.exports = async (req, res) => {
 
     // ── Win rate ──
     const closedWon = closedOpps.filter(o => o.IsWon === true);
-    const winRate = closedOpps.length
-      ? Math.round((closedWon.length / closedOpps.length) * 100)
+    // Win rate = won deals / all opportunities this year
+    const winRate = totalOppsThisYear
+      ? Math.round((closedWon.length / totalOppsThisYear) * 100)
       : null;
     // Opportunity Amount is annual contract value — divide by 12 for monthly revenue
     const closedWonValue = closedWon.reduce((a, o) => a + (o.Amount || 0), 0) / 12;
