@@ -255,6 +255,12 @@ module.exports = async (req, res) => {
     );
     const totalOppsThisYear = allOppsThisYear.length ? (allOppsThisYear[0].cnt || 0) : 0;
 
+    // 5c. Active clients — distinct accounts with a won (active) opportunity
+    const activeClientsResult = await soql(
+      `SELECT COUNT_DISTINCT(AccountId) accts FROM Opportunity WHERE IsWon = true AND AccountId != null${ownerFilter}`
+    );
+    const activeClients = activeClientsResult.length ? (activeClientsResult[0].accts || 0) : 0;
+
     // ── Pipeline by stage ──
     const stageTotals = {};
     PIPELINE_STAGES.forEach(s => stageTotals[s] = { value: 0, count: 0 });
@@ -330,6 +336,7 @@ module.exports = async (req, res) => {
         winRate,
         closedWonValue,
         closedWonCount: closedWon.length,
+        activeClients,
       },
     });
   } catch (err) {
