@@ -18,23 +18,26 @@ header span { font-size: .8rem; opacity: .55; }
 .kpi .sub { font-size: .8rem; color: #aaa; margin-top: 4px; }
 .kpi .sub.up { color: #16a34a; font-weight: 600; }
 .kpi .sub.down { color: #dc2626; font-weight: 600; }
-.charts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; padding: 20px 32px 32px; }
+.charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px 32px 32px; }
 .card { background: #fff; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
 .card h2 { font-size: .85rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #888; margin-bottom: 16px; }
-canvas { max-height: 260px; }
-.filters { display: flex; gap: 8px; padding: 16px 32px 0; flex-wrap: wrap; }
-.chip { padding: 6px 16px; border-radius: 20px; border: 1.5px solid #ddd; background: #fff; font-size: .8rem; font-weight: 600; cursor: pointer; color: #555; transition: all .15s; }
-.chip:hover { border-color: #6366f1; color: #6366f1; }
-.chip.active { background: #6366f1; border-color: #6366f1; color: #fff; }
+canvas { max-height: 280px; }
 .progress-bar { background: #f0f0f0; border-radius: 6px; height: 8px; margin-top: 10px; overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 6px; background: #6366f1; transition: width .4s; }
 .progress-fill.green { background: #16a34a; }
-.kpi-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 32px 0; }
-.kpi-row4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 16px 32px 0; }
-.kpi-row5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; padding: 16px 32px 0; }
-.section-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #aaa; padding: 20px 32px 0; }
+.kpi-row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 24px 32px 0; }
+.kpi-row4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 24px 32px 0; }
+.kpi-row5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; padding: 24px 32px 0; }
 .kpi.pending .value { color: #ccc; }
 .kpi.pending .sub { color: #ddd; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; padding: 0 32px; background: #1a1a2e; }
+.tab { padding: 14px 22px; font-size: .85rem; font-weight: 600; color: rgba(255,255,255,.55); cursor: pointer; border: none; background: transparent; border-bottom: 3px solid transparent; transition: all .15s; }
+.tab:hover { color: #fff; }
+.tab.active { color: #fff; border-bottom-color: #6366f1; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
 </style>
 </head>
 <body>
@@ -43,93 +46,106 @@ canvas { max-height: 260px; }
   <span id="generated-date"></span>
 </header>
 
-<div class="section-label">Revenue</div>
-<div class="kpi-row5" id="revenue-section" style="display:none">
-  <div class="kpi">
-    <div class="label">MRR</div>
-    <div class="value" id="kpi-monthly-rev">—</div>
-    <div class="sub" id="kpi-monthly-goal"></div>
-    <div class="progress-bar"><div class="progress-fill" id="monthly-bar" style="width:0%"></div></div>
-  </div>
-  <div class="kpi">
-    <div class="label">ARR</div>
-    <div class="value" id="kpi-arr">—</div>
-    <div class="sub" id="kpi-arr-sub"></div>
-  </div>
-  <div class="kpi">
-    <div class="label">Gross Revenue (YTD)</div>
-    <div class="value" id="kpi-annual-rev">—</div>
-    <div class="sub" id="kpi-annual-sub">Total revenue this fiscal year</div>
-  </div>
-  <div class="kpi">
-    <div class="label">Closed Won MRR (YTD)</div>
-    <div class="value" id="kpi-closed-won">—</div>
-    <div class="sub" id="kpi-closed-won-count"></div>
-  </div>
-  <div class="kpi">
-    <div class="label">Average Deal Size</div>
-    <div class="value" id="kpi-avg-deal">—</div>
-    <div class="sub">Closed won deals</div>
-  </div>
-</div>
+<nav class="tabs">
+  <button class="tab active" data-tab="revenue">Revenue</button>
+  <button class="tab" data-tab="pipeline">Pipeline</button>
+  <button class="tab" data-tab="efficiency">Efficiency</button>
+</nav>
 
-<div class="section-label">Pipeline</div>
-<div class="kpis">
-  <div class="kpi">
-    <div class="label">Open Pipeline Value</div>
-    <div class="value" id="kpi-pipeline">—</div>
-    <div class="sub" id="kpi-opps"></div>
+<!-- ── Revenue ─────────────────────────────────────────── -->
+<section class="tab-panel active" id="tab-revenue">
+  <div class="kpi-row5" id="revenue-section" style="display:none">
+    <div class="kpi">
+      <div class="label">MRR</div>
+      <div class="value" id="kpi-monthly-rev">—</div>
+      <div class="sub" id="kpi-monthly-goal"></div>
+      <div class="progress-bar"><div class="progress-fill" id="monthly-bar" style="width:0%"></div></div>
+    </div>
+    <div class="kpi">
+      <div class="label">ARR</div>
+      <div class="value" id="kpi-arr">—</div>
+      <div class="sub" id="kpi-arr-sub"></div>
+    </div>
+    <div class="kpi">
+      <div class="label">Gross Revenue (YTD)</div>
+      <div class="value" id="kpi-annual-rev">—</div>
+      <div class="sub" id="kpi-annual-sub">Total revenue this fiscal year</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Closed Won MRR (YTD)</div>
+      <div class="value" id="kpi-closed-won">—</div>
+      <div class="sub" id="kpi-closed-won-count"></div>
+    </div>
+    <div class="kpi">
+      <div class="label">Average Deal Size</div>
+      <div class="value" id="kpi-avg-deal">—</div>
+      <div class="sub">Closed won deals</div>
+    </div>
   </div>
-  <div class="kpi">
-    <div class="label">Pipeline Coverage Ratio</div>
-    <div class="value" id="kpi-coverage">—</div>
-    <div class="sub">vs 3x target</div>
-  </div>
-  <div class="kpi">
-    <div class="label">New Pipeline (MTD)</div>
-    <div class="value" id="kpi-mtd">—</div>
-    <div class="sub" id="kpi-mtd-count"></div>
-  </div>
-</div>
+</section>
 
-<div class="section-label">Efficiency</div>
-<div class="kpi-row4">
-  <div class="kpi">
-    <div class="label">YTD Meetings</div>
-    <div class="value" id="kpi-meetings">—</div>
-    <div class="sub" id="kpi-avg"></div>
+<!-- ── Pipeline ────────────────────────────────────────── -->
+<section class="tab-panel" id="tab-pipeline">
+  <div class="kpis">
+    <div class="kpi">
+      <div class="label">Open Pipeline Value</div>
+      <div class="value" id="kpi-pipeline">—</div>
+      <div class="sub" id="kpi-opps"></div>
+    </div>
+    <div class="kpi">
+      <div class="label">Pipeline Coverage Ratio</div>
+      <div class="value" id="kpi-coverage">—</div>
+      <div class="sub">vs 3x target</div>
+    </div>
+    <div class="kpi">
+      <div class="label">New Pipeline (MTD)</div>
+      <div class="value" id="kpi-mtd">—</div>
+      <div class="sub" id="kpi-mtd-count"></div>
+    </div>
   </div>
-  <div class="kpi pending">
-    <div class="label">Lead-to-Account Conversion</div>
-    <div class="value">—</div>
-    <div class="sub">Coming soon</div>
+  <div class="charts">
+    <div class="card">
+      <h2>Pipeline Funnel</h2>
+      <canvas id="stageChart"></canvas>
+    </div>
+    <div class="card">
+      <h2>New Pipeline Added (MoM)</h2>
+      <canvas id="growthChart"></canvas>
+    </div>
   </div>
-  <div class="kpi pending">
-    <div class="label">Account-to-Opportunity Rate</div>
-    <div class="value">—</div>
-    <div class="sub">Coming soon</div>
-  </div>
-  <div class="kpi">
-    <div class="label">Win Rate</div>
-    <div class="value" id="kpi-win-rate">—</div>
-    <div class="sub" id="kpi-win-rate-sub"></div>
-  </div>
-</div>
+</section>
 
-<div class="charts">
-  <div class="card">
-    <h2>Pipeline Funnel</h2>
-    <canvas id="stageChart"></canvas>
+<!-- ── Efficiency ──────────────────────────────────────── -->
+<section class="tab-panel" id="tab-efficiency">
+  <div class="kpi-row4">
+    <div class="kpi">
+      <div class="label">YTD Meetings</div>
+      <div class="value" id="kpi-meetings">—</div>
+      <div class="sub" id="kpi-avg"></div>
+    </div>
+    <div class="kpi pending">
+      <div class="label">Lead-to-Account Conversion</div>
+      <div class="value">—</div>
+      <div class="sub">Coming soon</div>
+    </div>
+    <div class="kpi pending">
+      <div class="label">Account-to-Opportunity Rate</div>
+      <div class="value">—</div>
+      <div class="sub">Coming soon</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Win Rate</div>
+      <div class="value" id="kpi-win-rate">—</div>
+      <div class="sub" id="kpi-win-rate-sub"></div>
+    </div>
   </div>
-  <div class="card">
-    <h2>Meetings per Month</h2>
-    <canvas id="meetingsChart"></canvas>
+  <div class="charts">
+    <div class="card">
+      <h2>Meetings per Month</h2>
+      <canvas id="meetingsChart"></canvas>
+    </div>
   </div>
-  <div class="card">
-    <h2>New Pipeline Added (MoM)</h2>
-    <canvas id="growthChart"></canvas>
-  </div>
-</div>
+</section>
 
 <script>
 let currentOwner = '';
@@ -137,6 +153,18 @@ let chartInstances = [];
 
 // Where ARR ended last fiscal year — for YoY comparison
 const LAST_YEAR_ARR = 250000;
+
+// ── Tab switching ──
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    // Charts created while hidden render at 0px — resize once visible
+    chartInstances.forEach(c => c.resize());
+  });
+});
 
 async function loadDashboard(owner) {
   // Destroy existing charts
@@ -326,16 +354,6 @@ async function loadDashboard(owner) {
     }
   }));
 }
-
-// Wire up filter chips
-document.querySelectorAll('.chip').forEach(chip => {
-  chip.addEventListener('click', () => {
-    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    currentOwner = chip.dataset.owner;
-    loadDashboard(currentOwner);
-  });
-});
 
 // Initial load
 loadDashboard('');
