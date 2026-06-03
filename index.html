@@ -135,8 +135,8 @@ canvas { max-height: 260px; }
 let currentOwner = '';
 let chartInstances = [];
 
-// Where gross revenue ended last fiscal year — for YoY comparison
-const LAST_YEAR_REVENUE = 250000;
+// Where ARR ended last fiscal year — for YoY comparison
+const LAST_YEAR_ARR = 250000;
 
 async function loadDashboard(owner) {
   // Destroy existing charts
@@ -170,31 +170,18 @@ async function loadDashboard(owner) {
     document.getElementById('monthly-bar').style.width = Math.min(r.monthlyPct, 100) + '%';
     document.getElementById('kpi-annual-rev').textContent = fmt(r.ytdRevenue);
 
-    // YoY vs where we ended last year
-    const annualSub = document.getElementById('kpi-annual-sub');
-    const yoyPct = LAST_YEAR_REVENUE > 0
-      ? Math.round((r.ytdRevenue - LAST_YEAR_REVENUE) / LAST_YEAR_REVENUE * 100)
-      : null;
-    if (yoyPct !== null) {
-      annualSub.textContent = `vs ${fmt(LAST_YEAR_REVENUE)} end of last year (${yoyPct >= 0 ? '+' : ''}${yoyPct}%)`;
-      annualSub.className = 'sub ' + (yoyPct >= 0 ? 'up' : 'down');
-    }
-
     // ARR vs MRR annualized
     const mrrAnnualized = r.currentMonthRevenue * 12;
     const arr = (r.arr !== undefined && r.arr !== null) ? r.arr : mrrAnnualized;
     document.getElementById('kpi-arr').textContent = fmt(arr);
+    // ARR compared to where we ended last year
     const arrSub = document.getElementById('kpi-arr-sub');
-    if (r.arr !== undefined && r.arr !== null) {
-      // Reported ARR exists — compare against the MRR run-rate
-      const delta = arr - mrrAnnualized;
-      const pct = mrrAnnualized > 0 ? Math.round(delta / mrrAnnualized * 100) : 0;
-      const sign = delta >= 0 ? '+' : '';
-      arrSub.textContent = `MRR annualized ${fmt(mrrAnnualized)} (${sign}${pct}%)`;
-      arrSub.className = 'sub ' + (delta >= 0 ? 'up' : 'down');
-    } else {
-      arrSub.textContent = 'MRR × 12 annualized';
-      arrSub.className = 'sub';
+    const arrYoyPct = LAST_YEAR_ARR > 0
+      ? Math.round((arr - LAST_YEAR_ARR) / LAST_YEAR_ARR * 100)
+      : null;
+    if (arrYoyPct !== null) {
+      arrSub.textContent = `vs ${fmt(LAST_YEAR_ARR)} end of last year (${arrYoyPct >= 0 ? '+' : ''}${arrYoyPct}%)`;
+      arrSub.className = 'sub ' + (arrYoyPct >= 0 ? 'up' : 'down');
     }
   }
 
