@@ -241,9 +241,9 @@ module.exports = async (req, res) => {
       arr: REVENUE.currentARR != null ? REVENUE.currentARR : currentMonthRevenue * 12,
     });
 
-    // 5. Closed won + lost this FY
+    // 5. Closed won + lost this FY (cap at today so future-dated closes aren't counted)
     const closedOpps = await soql(
-      `SELECT Id, StageName, Amount, CloseDate FROM Opportunity WHERE StageName IN ('Closed Won', 'Closed Lost') AND CloseDate >= ${FISCAL_YEAR}-01-01 LIMIT 2000`
+      `SELECT Id, StageName, Amount, CloseDate FROM Opportunity WHERE StageName IN ('Closed Won', 'Closed Lost') AND CloseDate >= ${FISCAL_YEAR}-01-01 AND CloseDate <= ${today}${ownerFilter} LIMIT 2000`
     );
 
     // ── Pipeline by stage ──
