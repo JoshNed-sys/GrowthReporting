@@ -77,9 +77,9 @@ canvas { max-height: 280px; }
       <div class="sub" id="kpi-closed-won-count"></div>
     </div>
     <div class="kpi">
-      <div class="label">Average Deal Size</div>
-      <div class="value" id="kpi-avg-deal">—</div>
-      <div class="sub">Closed won deals</div>
+      <div class="label">Average Customer Value</div>
+      <div class="value" id="kpi-acv">—</div>
+      <div class="sub" id="kpi-acv-sub">ARR per active client</div>
     </div>
   </div>
 </section>
@@ -211,6 +211,12 @@ async function loadDashboard(owner) {
       arrSub.textContent = `${arrYoyPct >= 0 ? '+' : ''}${arrYoyPct}% vs last year`;
       arrSub.className = 'sub ' + (arrYoyPct >= 0 ? 'up' : 'down');
     }
+
+    // Average customer value = ARR / active clients
+    const activeClients = D.summary.activeClients || 0;
+    const acv = activeClients > 0 ? arr / activeClients : 0;
+    document.getElementById('kpi-acv').textContent = acv > 0 ? fmt(acv) : '—';
+    document.getElementById('kpi-acv-sub').textContent = activeClients + ' active clients';
   }
 
   // Pipeline KPIs
@@ -226,8 +232,6 @@ async function loadDashboard(owner) {
   if (D.summary.closedWonValue !== undefined) {
     document.getElementById('kpi-closed-won').textContent = fmt(D.summary.closedWonValue);
     document.getElementById('kpi-closed-won-count').textContent = (D.summary.closedWonCount || 0) + ' deals closed · new MRR/mo';
-    const avgDeal = D.summary.closedWonCount > 0 ? D.summary.closedWonValue / D.summary.closedWonCount : 0;
-    document.getElementById('kpi-avg-deal').textContent = avgDeal > 0 ? fmt(avgDeal) : '—';
   }
 
   // Win rate
