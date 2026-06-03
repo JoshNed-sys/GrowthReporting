@@ -6,32 +6,35 @@
 <title>Sales Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f6fa; color: #1a1a2e; }
-  header { background: #1a1a2e; color: #fff; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; }
-  header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: .02em; }
-  header span { font-size: .8rem; opacity: .55; }
-  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 24px 32px 0; }
-  .kpi { background: #fff; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
-  .kpi .label { font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #888; margin-bottom: 6px; }
-  .kpi .value { font-size: 2rem; font-weight: 700; color: #1a1a2e; }
-  .kpi .sub { font-size: .8rem; color: #aaa; margin-top: 4px; }
-  .charts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; padding: 20px 32px 32px; }
-  .card { background: #fff; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
-  .card h2 { font-size: .85rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #888; margin-bottom: 16px; }
-  canvas { max-height: 260px; }
-  .filters { display: flex; gap: 8px; padding: 16px 32px 0; flex-wrap: wrap; }
-  .chip { padding: 6px 16px; border-radius: 20px; border: 1.5px solid #ddd; background: #fff; font-size: .8rem; font-weight: 600; cursor: pointer; color: #555; transition: all .15s; }
-  .chip:hover { border-color: #6366f1; color: #6366f1; }
-  .chip.active { background: #6366f1; border-color: #6366f1; color: #fff; }
-  .progress-bar { background: #f0f0f0; border-radius: 6px; height: 8px; margin-top: 10px; overflow: hidden; }
-  .progress-fill { height: 100%; border-radius: 6px; background: #6366f1; transition: width .4s; }
-  .progress-fill.green { background: #16a34a; }
-  .kpi-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 32px 0; }
-  .kpi-row4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 16px 32px 0; }
-  .section-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #aaa; padding: 20px 32px 0; }
-  .kpi.pending .value { color: #ccc; }
-  .kpi.pending .sub { color: #ddd; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f6fa; color: #1a1a2e; }
+header { background: #1a1a2e; color: #fff; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; }
+header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: .02em; }
+header span { font-size: .8rem; opacity: .55; }
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 24px 32px 0; }
+.kpi { background: #fff; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.kpi .label { font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #888; margin-bottom: 6px; }
+.kpi .value { font-size: 2rem; font-weight: 700; color: #1a1a2e; }
+.kpi .sub { font-size: .8rem; color: #aaa; margin-top: 4px; }
+.kpi .sub.up { color: #16a34a; font-weight: 600; }
+.kpi .sub.down { color: #dc2626; font-weight: 600; }
+.charts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; padding: 20px 32px 32px; }
+.card { background: #fff; border-radius: 10px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.card h2 { font-size: .85rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #888; margin-bottom: 16px; }
+canvas { max-height: 260px; }
+.filters { display: flex; gap: 8px; padding: 16px 32px 0; flex-wrap: wrap; }
+.chip { padding: 6px 16px; border-radius: 20px; border: 1.5px solid #ddd; background: #fff; font-size: .8rem; font-weight: 600; cursor: pointer; color: #555; transition: all .15s; }
+.chip:hover { border-color: #6366f1; color: #6366f1; }
+.chip.active { background: #6366f1; border-color: #6366f1; color: #fff; }
+.progress-bar { background: #f0f0f0; border-radius: 6px; height: 8px; margin-top: 10px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 6px; background: #6366f1; transition: width .4s; }
+.progress-fill.green { background: #16a34a; }
+.kpi-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 32px 0; }
+.kpi-row4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 16px 32px 0; }
+.kpi-row5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; padding: 16px 32px 0; }
+.section-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #aaa; padding: 20px 32px 0; }
+.kpi.pending .value { color: #ccc; }
+.kpi.pending .sub { color: #ddd; }
 </style>
 </head>
 <body>
@@ -41,12 +44,17 @@
 </header>
 
 <div class="section-label">Revenue</div>
-<div class="kpi-row4" id="revenue-section" style="display:none">
+<div class="kpi-row5" id="revenue-section" style="display:none">
   <div class="kpi">
     <div class="label">MRR</div>
     <div class="value" id="kpi-monthly-rev">—</div>
     <div class="sub" id="kpi-monthly-goal"></div>
     <div class="progress-bar"><div class="progress-fill" id="monthly-bar" style="width:0%"></div></div>
+  </div>
+  <div class="kpi">
+    <div class="label">ARR</div>
+    <div class="value" id="kpi-arr">—</div>
+    <div class="sub" id="kpi-arr-sub"></div>
   </div>
   <div class="kpi">
     <div class="label">Gross Revenue (YTD)</div>
@@ -158,12 +166,28 @@ async function loadDashboard(owner) {
     document.getElementById('kpi-monthly-goal').textContent = `${r.monthlyPct}% of ${fmt(r.monthlyGoal)} goal`;
     document.getElementById('monthly-bar').style.width = Math.min(r.monthlyPct, 100) + '%';
     document.getElementById('kpi-annual-rev').textContent = fmt(r.ytdRevenue);
+
+    // ARR vs MRR annualized
+    const mrrAnnualized = r.currentMonthRevenue * 12;
+    const arr = (r.arr !== undefined && r.arr !== null) ? r.arr : mrrAnnualized;
+    document.getElementById('kpi-arr').textContent = fmt(arr);
+    const arrSub = document.getElementById('kpi-arr-sub');
+    if (r.arr !== undefined && r.arr !== null) {
+      // Reported ARR exists — compare against the MRR run-rate
+      const delta = arr - mrrAnnualized;
+      const pct = mrrAnnualized > 0 ? Math.round(delta / mrrAnnualized * 100) : 0;
+      const sign = delta >= 0 ? '+' : '';
+      arrSub.textContent = `MRR annualized ${fmt(mrrAnnualized)} (${sign}${pct}%)`;
+      arrSub.className = 'sub ' + (delta >= 0 ? 'up' : 'down');
+    } else {
+      arrSub.textContent = 'MRR × 12 annualized';
+      arrSub.className = 'sub';
+    }
   }
 
   // Pipeline KPIs
   document.getElementById('kpi-pipeline').textContent = fmt(D.summary.totalOpenPipelineValue);
   document.getElementById('kpi-opps').textContent = D.summary.totalOpenOpportunities + ' open opportunities';
-  document.getElementById('kpi-mtd').textContent; // set below in MTD block
 
   // Pipeline coverage (open pipeline / quota — quota TBD)
   const QUOTA = 750000;
@@ -193,9 +217,7 @@ async function loadDashboard(owner) {
   if (growth.length > 0) {
     const mtd = growth[growth.length - 1];
     const prev = growth[growth.length - 2];
-    const momPct = prev && prev.value > 0
-      ? Math.round((mtd.value - prev.value) / prev.value * 100)
-      : null;
+    const momPct = prev && prev.value > 0 ? Math.round((mtd.value - prev.value) / prev.value * 100) : null;
     const momStr = momPct !== null ? ` (${momPct >= 0 ? '+' : ''}${momPct}% MoM)` : '';
     document.getElementById('kpi-mtd').textContent = fmt(mtd.value);
     document.getElementById('kpi-mtd-count').textContent = mtd.count + ' new opps · ' + mtd.month + momStr;
@@ -266,16 +288,8 @@ async function loadDashboard(owner) {
         }
       },
       scales: {
-        x: {
-          stacked: true,
-          display: false,
-          grid: { display: false }
-        },
-        y: {
-          stacked: true,
-          grid: { display: false },
-          ticks: { font: { size: 12 } }
-        }
+        x: { stacked: true, display: false, grid: { display: false } },
+        y: { stacked: true, grid: { display: false }, ticks: { font: { size: 12 } } }
       }
     }
   }));
@@ -287,12 +301,7 @@ async function loadDashboard(owner) {
     plugins: [momPlugin],
     data: {
       labels: mData.map(m => m.month),
-      datasets: [{
-        label: 'Meetings',
-        data: mData.map(m => m.meetings),
-        backgroundColor: '#6366f1',
-        borderRadius: 4
-      }]
+      datasets: [{ label: 'Meetings', data: mData.map(m => m.meetings), backgroundColor: '#6366f1', borderRadius: 4 }]
     },
     options: {
       layout: { padding: { top: 24 } },
@@ -308,22 +317,12 @@ async function loadDashboard(owner) {
     plugins: [momPlugin],
     data: {
       labels: gData.map(g => g.month),
-      datasets: [{
-        label: 'New Pipeline Value',
-        data: gData.map(g => g.value),
-        backgroundColor: '#22d3ee',
-        borderRadius: 4
-      }]
+      datasets: [{ label: 'New Pipeline Value', data: gData.map(g => g.value), backgroundColor: '#22d3ee', borderRadius: 4 }]
     },
     options: {
       layout: { padding: { top: 24 } },
       plugins: { legend: { display: false } },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: { callback: v => '$' + (v/1e3).toFixed(0)+'K' }
-        }
-      }
+      scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + (v/1e3).toFixed(0)+'K' } } }
     }
   }));
 }
