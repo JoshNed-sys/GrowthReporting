@@ -241,9 +241,12 @@ module.exports = async (req, res) => {
       arr: REVENUE.currentARR != null ? REVENUE.currentARR : currentMonthRevenue * 12,
     });
 
-    // 5. Closed won + lost this FY (cap at today so future-dated closes aren't counted)
+    // 5. Closed opps this FY — use IsClosed/IsWon flags, not StageName.
+    // Won deals live under multiple stage names (e.g. 'Active', 'Closed Won',
+    // 'Demo Platform Configuration'), so IsWon is the reliable signal.
+    // Cap at today so future-dated closes aren't counted.
     const closedOpps = await soql(
-      `SELECT Id, StageName, Amount, CloseDate FROM Opportunity WHERE StageName IN ('Closed Won', 'Closed Lost') AND CloseDate >= ${FISCAL_YEAR}-01-01 AND CloseDate <= ${today}${ownerFilter} LIMIT 2000`
+      `SELECT Id, StageName, IsWon, Amount, CloseDate FROM Opportunity WHERE IsClosed = true AND CloseDate >= ${FISCAL_YEAR}-01-01 AND CloseDate <= ${today}${ownerFilter} LIMIT 2000`
     );
 
     // ── Pipeline by stage ──
@@ -298,7 +301,7 @@ module.exports = async (req, res) => {
     const qbRevenue = await qbRevenuePromise;
 
     // ── Win rate ──
-    const closedWon = closedOpps.filter(o => o.StageName === 'Closed Won');
+    const closedWon = closedOpps.filter(o => o.IsWon === true);
     const winRate = closedOpps.length
       ? Math.round((closedWon.length / closedOpps.length) * 100)
       : null;
