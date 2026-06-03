@@ -180,7 +180,7 @@ async function loadDashboard(owner) {
       ? Math.round((arr - LAST_YEAR_ARR) / LAST_YEAR_ARR * 100)
       : null;
     if (arrYoyPct !== null) {
-      arrSub.textContent = `vs ${fmt(LAST_YEAR_ARR)} end of last year (${arrYoyPct >= 0 ? '+' : ''}${arrYoyPct}%)`;
+      arrSub.textContent = `${arrYoyPct >= 0 ? '+' : ''}${arrYoyPct}% vs last year`;
       arrSub.className = 'sub ' + (arrYoyPct >= 0 ? 'up' : 'down');
     }
   }
