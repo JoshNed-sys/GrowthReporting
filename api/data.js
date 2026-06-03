@@ -19,7 +19,7 @@ const REVENUE = {
     { month: 'Feb 2026', revenue: 20000 },
     { month: 'Mar 2026', revenue: 20000 },
     { month: 'Apr 2026', revenue: 38250 },
-    { month: 'May 2026', revenue: 30470 },
+    { month: 'May 2026', revenue: 32810 },
     // Add new months here
   ],
 };
