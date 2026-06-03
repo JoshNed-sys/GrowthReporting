@@ -1,6 +1,5 @@
 // api/data.js — Vercel serverless function
 // Queries Salesforce via Composio and returns dashboard JSON
-
 const https = require('https');
 
 const PIPELINE_STAGES = ['Qualify', 'Explore', 'Propose', 'Negotiate', 'Nurture'];
@@ -11,6 +10,9 @@ const FISCAL_YEAR = new Date().getFullYear();
 const REVENUE = {
   monthlyGoal: 83000,
   annualGoal: 750000,
+  // True ARR from active recurring subscriptions (e.g. Stripe/contracts).
+  // Update manually. Leave null to fall back to MRR × 12 on the dashboard.
+  currentARR: null,
   // Monthly revenue — update the current month each month
   monthly: [
     { month: 'Jan 2026', revenue: 20000 },
@@ -23,13 +25,11 @@ const REVENUE = {
 };
 
 // ── Composio SOQL helper ─────────────────────────────────────────────────────
-
 async function soql(query) {
   const body = JSON.stringify({
     entity_id: 'josh@nedhelps.com',
     arguments: { query },
   });
-
   return new Promise((resolve, reject) => {
     const req = https.request({
       hostname: 'backend.composio.dev',
@@ -61,7 +61,6 @@ async function soql(query) {
 }
 
 // ── QuickBooks auth + revenue ─────────────────────────────────────────────────
-
 const MONTHLY_REVENUE_GOAL = 83000;
 const ANNUAL_REVENUE_GOAL = 750000;
 const QB_BASE = 'sandbox-quickbooks.api.intuit.com';
@@ -98,7 +97,6 @@ async function qbRefreshToken() {
     refresh_token: process.env.QB_REFRESH_TOKEN,
   }).toString();
   const auth = Buffer.from(`${process.env.QB_CLIENT_ID}:${process.env.QB_CLIENT_SECRET}`).toString('base64');
-
   return new Promise((resolve, reject) => {
     const req = https.request({
       hostname: 'oauth.platform.intuit.com',
@@ -175,6 +173,7 @@ async function getQBRevenue(fiscalYear) {
       annualGoal: ANNUAL_REVENUE_GOAL,
       monthlyPct: Math.round((currentMonthRevenue / MONTHLY_REVENUE_GOAL) * 100),
       annualPct: Math.round((ytdRevenue / ANNUAL_REVENUE_GOAL) * 100),
+      arr: REVENUE.currentARR != null ? REVENUE.currentARR : currentMonthRevenue * 12,
     };
   } catch (e) {
     console.error('QB revenue error:', e.message);
@@ -183,7 +182,6 @@ async function getQBRevenue(fiscalYear) {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
 function monthLabel(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -196,7 +194,6 @@ function monthSortKey(label) {
 }
 
 // ── Main handler ─────────────────────────────────────────────────────────────
-
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 's-maxage=300');
@@ -240,6 +237,8 @@ module.exports = async (req, res) => {
       annualGoal: REVENUE.annualGoal,
       monthlyPct: Math.round((currentMonthRevenue / REVENUE.monthlyGoal) * 100),
       annualPct: Math.round((ytdRevenue / REVENUE.annualGoal) * 100),
+      // True ARR if provided, else annualize current MRR
+      arr: REVENUE.currentARR != null ? REVENUE.currentARR : currentMonthRevenue * 12,
     });
 
     // 5. Closed won + lost this FY
@@ -260,7 +259,6 @@ module.exports = async (req, res) => {
     const pipelineByStage = PIPELINE_STAGES
       .filter(s => stageTotals[s].count > 0)
       .map(s => ({ stage: s, value: stageTotals[s].value, count: stageTotals[s].count }));
-
     const totalPipelineValue = pipelineByStage.reduce((a, s) => a + s.value, 0);
     const totalOpenOpps = pipelineByStage.reduce((a, s) => a + s.count, 0);
 
@@ -291,7 +289,6 @@ module.exports = async (req, res) => {
     const meetingsPerMonth = Object.keys(meetingsByMonth)
       .sort((a, b) => monthSortKey(a) - monthSortKey(b))
       .map(m => ({ month: m, meetings: meetingsByMonth[m] }));
-
     const ytdMeetings = meetingsPerMonth.reduce((a, m) => a + m.meetings, 0);
     const avgMonthlyMeetings = meetingsPerMonth.length
       ? Math.round((ytdMeetings / meetingsPerMonth.length) * 10) / 10
@@ -324,7 +321,6 @@ module.exports = async (req, res) => {
         closedWonCount: closedWon.length,
       },
     });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
