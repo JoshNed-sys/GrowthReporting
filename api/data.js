@@ -305,7 +305,8 @@ module.exports = async (req, res) => {
     const winRate = closedOpps.length
       ? Math.round((closedWon.length / closedOpps.length) * 100)
       : null;
-    const closedWonValue = closedWon.reduce((a, o) => a + (o.Amount || 0), 0);
+    // Opportunity Amount is annual contract value — divide by 12 for monthly revenue
+    const closedWonValue = closedWon.reduce((a, o) => a + (o.Amount || 0), 0) / 12;
 
     res.status(200).json({
       generated: today,
