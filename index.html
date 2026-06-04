@@ -58,7 +58,7 @@ canvas { max-height: 280px; }
   <div style="padding: 24px 32px;">
     <div class="card">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-        <h2 style="margin:0;">AI Overview</h2>
+        <h2 style="margin:0;">Executive Summary</h2>
         <button id="overview-refresh" class="tab" style="border:1px solid #ddd; border-radius:8px; color:#6366f1; padding:6px 14px;">Regenerate</button>
       </div>
       <div id="overview-content" style="font-size:.95rem; line-height:1.65; color:#333;">Generating summary…</div>
@@ -183,6 +183,35 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab => {
   });
 });
 
+// ── Minimal markdown → HTML for the summary ──
+function renderMarkdown(md) {
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  const lines = md.trim().split('\n');
+  let html = '', list = null; // list = 'ul' | 'ol' | null
+  const closeList = () => { if (list) { html += `</${list}>`; list = null; } };
+  for (let raw of lines) {
+    const line = raw.trim();
+    if (!line) { closeList(); continue; }
+    let m;
+    if ((m = line.match(/^##+\s+(.*)/))) {
+      closeList();
+      html += `<h3 style="font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:#6366f1; margin:18px 0 8px;">${inline(m[1])}</h3>`;
+    } else if ((m = line.match(/^[-*]\s+(.*)/))) {
+      if (list !== 'ul') { closeList(); html += '<ul style="margin:0 0 8px; padding-left:20px;">'; list = 'ul'; }
+      html += `<li style="margin:4px 0;">${inline(m[1])}</li>`;
+    } else if ((m = line.match(/^\d+\.\s+(.*)/))) {
+      if (list !== 'ol') { closeList(); html += '<ol style="margin:0 0 8px; padding-left:22px;">'; list = 'ol'; }
+      html += `<li style="margin:6px 0;">${inline(m[1])}</li>`;
+    } else {
+      closeList();
+      html += `<p style="margin:0 0 10px;">${inline(line)}</p>`;
+    }
+  }
+  closeList();
+  return html;
+}
+
 // ── AI overview (lazy-loaded, paid LLM call) ──
 let overviewLoaded = false;
 async function loadOverview(force) {
@@ -198,11 +227,7 @@ async function loadOverview(force) {
     if (!res.ok) throw new Error('API error ' + res.status);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    content.innerHTML = data.summary
-      .trim()
-      .split(/\n\s*\n/)
-      .map(p => '<p style="margin:0 0 12px;">' + p.replace(/\n/g, '<br>') + '</p>')
-      .join('');
+    content.innerHTML = renderMarkdown(data.summary);
     meta.textContent = 'Generated ' + (data.generated || '');
   } catch (e) {
     content.innerHTML = '<span style="color:#dc2626;">Failed to generate summary: ' + e.message + '</span>';
