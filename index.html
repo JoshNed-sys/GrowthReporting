@@ -47,13 +47,28 @@ canvas { max-height: 280px; }
 </header>
 
 <nav class="tabs">
-  <button class="tab active" data-tab="revenue">Revenue</button>
+  <button class="tab active" data-tab="overview">Overview</button>
+  <button class="tab" data-tab="revenue">Revenue</button>
   <button class="tab" data-tab="pipeline">Pipeline</button>
   <button class="tab" data-tab="efficiency">Efficiency</button>
 </nav>
 
+<!-- ── Overview (AI summary) ───────────────────────────── -->
+<section class="tab-panel active" id="tab-overview">
+  <div style="padding: 24px 32px;">
+    <div class="card">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <h2 style="margin:0;">AI Overview</h2>
+        <button id="overview-refresh" class="tab" style="border:1px solid #ddd; border-radius:8px; color:#6366f1; padding:6px 14px;">Regenerate</button>
+      </div>
+      <div id="overview-content" style="font-size:.95rem; line-height:1.65; color:#333;">Generating summary…</div>
+      <div id="overview-meta" style="font-size:.75rem; color:#aaa; margin-top:14px;"></div>
+    </div>
+  </div>
+</section>
+
 <!-- ── Revenue ─────────────────────────────────────────── -->
-<section class="tab-panel active" id="tab-revenue">
+<section class="tab-panel" id="tab-revenue">
   <div class="kpi-row5" id="revenue-section" style="display:none">
     <div class="kpi">
       <div class="label">MRR</div>
@@ -155,16 +170,45 @@ let chartInstances = [];
 const LAST_YEAR_ARR = 250000;
 
 // ── Tab switching ──
-document.querySelectorAll('.tab').forEach(tab => {
+document.querySelectorAll('.tab[data-tab]').forEach(tab => {
   tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
     // Charts created while hidden render at 0px — resize once visible
     chartInstances.forEach(c => c.resize());
+    // Lazy-load the AI overview the first time it's opened
+    if (tab.dataset.tab === 'overview') loadOverview();
   });
 });
+
+// ── AI overview (lazy-loaded, paid LLM call) ──
+let overviewLoaded = false;
+async function loadOverview(force) {
+  if (overviewLoaded && !force) return;
+  overviewLoaded = true;
+  const content = document.getElementById('overview-content');
+  const meta = document.getElementById('overview-meta');
+  content.textContent = 'Generating summary…';
+  meta.textContent = '';
+  try {
+    const url = '/api/overview' + (force ? '?t=' + Date.now() : '');
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('API error ' + res.status);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    content.innerHTML = data.summary
+      .trim()
+      .split(/\n\s*\n/)
+      .map(p => '<p style="margin:0 0 12px;">' + p.replace(/\n/g, '<br>') + '</p>')
+      .join('');
+    meta.textContent = 'Generated ' + (data.generated || '');
+  } catch (e) {
+    content.innerHTML = '<span style="color:#dc2626;">Failed to generate summary: ' + e.message + '</span>';
+  }
+}
+document.getElementById('overview-refresh').addEventListener('click', () => loadOverview(true));
 
 async function loadDashboard(owner) {
   // Destroy existing charts
@@ -361,6 +405,7 @@ async function loadDashboard(owner) {
 
 // Initial load
 loadDashboard('');
+loadOverview(); // Overview is the landing tab
 </script>
 </body>
 </html>
