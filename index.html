@@ -64,6 +64,18 @@ canvas { max-height: 280px; }
       <div id="overview-content" style="font-size:.95rem; line-height:1.65; color:#333;">Generating summary…</div>
       <div id="overview-meta" style="font-size:.75rem; color:#aaa; margin-top:14px;"></div>
     </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h2 style="margin:0 0 4px;">Ask about your data</h2>
+      <p style="font-size:.8rem; color:#aaa; margin:0 0 14px;">e.g. "Why is win rate low?" · "Which stage is stalling?" · "How are we pacing to the annual goal?"</p>
+      <div id="chat-log" style="display:flex; flex-direction:column; gap:12px; margin-bottom:14px;"></div>
+      <div style="display:flex; gap:8px;">
+        <input id="chat-input" type="text" placeholder="Ask a question…" autocomplete="off"
+          style="flex:1; padding:11px 14px; border:1.5px solid #ddd; border-radius:8px; font-size:.9rem; outline:none;" />
+        <button id="chat-send"
+          style="padding:11px 20px; border:none; border-radius:8px; background:#6366f1; color:#fff; font-weight:600; font-size:.9rem; cursor:pointer;">Send</button>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -234,6 +246,47 @@ async function loadOverview(force) {
   }
 }
 document.getElementById('overview-refresh').addEventListener('click', () => loadOverview(true));
+
+// ── Chat with the data ──
+const chatHistory = [];
+function addChatBubble(role, html) {
+  const log = document.getElementById('chat-log');
+  const wrap = document.createElement('div');
+  const isUser = role === 'user';
+  wrap.style.cssText = `align-self:${isUser ? 'flex-end' : 'flex-start'}; max-width:85%;
+    background:${isUser ? '#6366f1' : '#f0f0f4'}; color:${isUser ? '#fff' : '#222'};
+    padding:10px 14px; border-radius:12px; font-size:.9rem; line-height:1.55;`;
+  wrap.innerHTML = html;
+  log.appendChild(wrap);
+  log.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  return wrap;
+}
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  addChatBubble('user', msg.replace(/</g, '&lt;'));
+  const thinking = addChatBubble('assistant', '<em style="opacity:.6;">Thinking…</em>');
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, history: chatHistory }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    thinking.innerHTML = renderMarkdown(data.reply);
+    chatHistory.push({ role: 'user', content: msg });
+    chatHistory.push({ role: 'assistant', content: data.reply });
+  } catch (e) {
+    thinking.innerHTML = '<span style="color:#dc2626;">Error: ' + e.message + '</span>';
+  }
+}
+document.getElementById('chat-send').addEventListener('click', sendChat);
+document.getElementById('chat-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendChat();
+});
 
 async function loadDashboard(owner) {
   // Destroy existing charts
