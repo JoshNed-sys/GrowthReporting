@@ -17,29 +17,48 @@ module.exports = async (req, res) => {
 
     const prompt =
 `You are a sharp revenue analyst writing an executive summary for the founder of this org.
-Using ONLY the metrics below, produce a scannable, highly actionable brief.
+Evaluate the metrics against the company's stated business goals (below), and produce
+a scannable, highly actionable brief that frames everything in terms of progress toward
+those goals.
 
-Format your response EXACTLY like this, using markdown:
+=== COMPANY BUSINESS GOALS (the lens to judge performance through) ===
 
-**Bottom line:** <one punchy sentence on overall health, citing ARR and growth vs last year>
+Revenue Growth goals:
+- Pipeline Coverage Ratio: maintain 3x open pipeline coverage against quota; catch shortfalls early.
+- New Pipeline Created (MoM): drive consistent net-new pipeline each month as a leading indicator of future revenue.
+- Closed Won Revenue (YTD): grow booked revenue against the annual target with YoY improvement; measure quarterly pacing.
+- Average Deal Size: grow average contract value by moving upmarket; watch for drift toward smaller deals.
 
-## What's working
-- <bullet with a specific number>
-- <bullet with a specific number>
-- <bullet with a specific number>
+Efficiency goals:
+- Lead-to-Account Conversion: convert prospects into qualified accounts by booking meetings; build reliable top-of-funnel.
+- Account-to-Opportunity Rate: convert post-meeting accounts into real opportunities; reduce pipeline inflation from unqualified accounts.
+- Opportunity Stage Velocity: move deals efficiently Qualify→Negotiate; find and remove stage bottlenecks; shorten cycle without losing quality.
+- Win Rate: improve the % of open opportunities that close won via better qualification and rep execution; track win/loss patterns.
 
-## What's at risk
-- <bullet naming the risk + the number behind it>
-- <bullet naming the risk + the number behind it>
+When a metric needed to judge a goal is missing from the data, say so briefly and note it as a measurement gap rather than inventing a number.
+
+=== END GOALS ===
+
+Using the metrics below, format your response EXACTLY like this, using markdown:
+
+**Bottom line:** <one punchy sentence on overall health vs goals, citing ARR and growth vs last year>
+
+## On track
+- <goal being met or progressing + the number proving it>
+- <goal being met or progressing + the number proving it>
+
+## Off track
+- <goal that's behind + the number + which goal it maps to>
+- <goal that's behind + the number + which goal it maps to>
 
 ## Do this next
-1. <imperative action starting with a verb> — <expected impact, tied to a metric>
-2. <imperative action starting with a verb> — <expected impact, tied to a metric>
-3. <imperative action starting with a verb> — <expected impact, tied to a metric>
+1. <imperative action starting with a verb> — <which goal it moves + expected metric impact>
+2. <imperative action starting with a verb> — <which goal it moves + expected metric impact>
+3. <imperative action starting with a verb> — <which goal it moves + expected metric impact>
 
-Rules: lead every bullet with the concrete figure. Keep each bullet to one line.
+Rules: lead every bullet with the concrete figure and tie it to a named goal. One line per bullet.
 Make recommendations specific and immediately doable, not generic advice.
-Total under 220 words. Do not add any text outside this structure.
+Total under 230 words. Do not add any text outside this structure.
 
 METRICS (JSON):
 ${JSON.stringify(data, null, 2)}`;
