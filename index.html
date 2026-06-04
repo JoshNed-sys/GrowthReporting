@@ -30,6 +30,7 @@ canvas { max-height: 280px; }
 .kpi-row5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; padding: 24px 32px 0; }
 .kpi.pending .value { color: #ccc; }
 .kpi.pending .sub { color: #ddd; }
+.section-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #aaa; padding: 28px 32px 0; }
 
 /* Tabs */
 .tabs { display: flex; gap: 4px; padding: 0 32px; background: #1a1a2e; }
@@ -47,43 +48,14 @@ canvas { max-height: 280px; }
 </header>
 
 <nav class="tabs">
-  <button class="tab active" data-tab="overview">Overview</button>
-  <button class="tab" data-tab="revenue">Revenue</button>
-  <button class="tab" data-tab="pipeline">Pipeline</button>
-  <button class="tab" data-tab="efficiency">Efficiency</button>
+  <button class="tab active" data-tab="dashboard">Dashboard</button>
+  <button class="tab" data-tab="actions">Action Center</button>
 </nav>
 
-<!-- ── Overview (AI summary) ───────────────────────────── -->
-<section class="tab-panel active" id="tab-overview">
-  <div style="padding: 24px 32px;">
-    <div class="card">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-        <h2 style="margin:0;">Executive Summary</h2>
-        <button id="overview-refresh" class="tab" style="border:1px solid #ddd; border-radius:8px; color:#6366f1; padding:6px 14px;">Regenerate</button>
-      </div>
-      <div id="overview-content" style="font-size:.95rem; line-height:1.65; color:#333;">Generating summary…</div>
-      <div id="overview-meta" style="font-size:.75rem; color:#aaa; margin-top:14px;"></div>
-    </div>
+<!-- ── Dashboard (all data in one view) ────────────────── -->
+<section class="tab-panel active" id="tab-dashboard">
 
-    <div class="card" style="margin-top:16px;">
-      <div style="display:flex; align-items:center; justify-content:space-between;">
-        <h2 style="margin:0 0 4px;">Ask about your data</h2>
-        <button id="chat-clear" class="tab" style="border:1px solid #ddd; border-radius:8px; color:#888; padding:5px 12px; font-size:.8rem;">Clear</button>
-      </div>
-      <p style="font-size:.8rem; color:#aaa; margin:0 0 14px;">e.g. "Why is win rate low?" · "Which stage is stalling?" · "How are we pacing to the annual goal?"</p>
-      <div id="chat-log" style="display:flex; flex-direction:column; gap:12px; margin-bottom:14px; max-height:380px; overflow-y:auto;"></div>
-      <div style="display:flex; gap:8px;">
-        <input id="chat-input" type="text" placeholder="Ask a question…" autocomplete="off"
-          style="flex:1; padding:11px 14px; border:1.5px solid #ddd; border-radius:8px; font-size:.9rem; outline:none;" />
-        <button id="chat-send"
-          style="padding:11px 20px; border:none; border-radius:8px; background:#6366f1; color:#fff; font-weight:600; font-size:.9rem; cursor:pointer;">Send</button>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── Revenue ─────────────────────────────────────────── -->
-<section class="tab-panel" id="tab-revenue">
+  <div class="section-label">Revenue</div>
   <div class="kpi-row5" id="revenue-section" style="display:none">
     <div class="kpi">
       <div class="label">MRR</div>
@@ -112,10 +84,8 @@ canvas { max-height: 280px; }
       <div class="sub" id="kpi-acv-sub">ARR per active client</div>
     </div>
   </div>
-</section>
 
-<!-- ── Pipeline ────────────────────────────────────────── -->
-<section class="tab-panel" id="tab-pipeline">
+  <div class="section-label">Pipeline</div>
   <div class="kpis">
     <div class="kpi">
       <div class="label">Open Pipeline Value</div>
@@ -143,10 +113,8 @@ canvas { max-height: 280px; }
       <canvas id="growthChart"></canvas>
     </div>
   </div>
-</section>
 
-<!-- ── Efficiency ──────────────────────────────────────── -->
-<section class="tab-panel" id="tab-efficiency">
+  <div class="section-label">Efficiency</div>
   <div class="kpi-row4">
     <div class="kpi">
       <div class="label">YTD Meetings</div>
@@ -175,6 +143,37 @@ canvas { max-height: 280px; }
       <canvas id="meetingsChart"></canvas>
     </div>
   </div>
+
+  <div style="height:32px;"></div>
+</section>
+
+<!-- ── Action Center (AI summary + chat) ───────────────── -->
+<section class="tab-panel" id="tab-actions">
+  <div style="padding: 24px 32px;">
+    <div class="card">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <h2 style="margin:0;">Executive Summary</h2>
+        <button id="overview-refresh" class="tab" style="border:1px solid #ddd; border-radius:8px; color:#6366f1; padding:6px 14px;">Regenerate</button>
+      </div>
+      <div id="overview-content" style="font-size:.95rem; line-height:1.65; color:#333;">Open this tab to generate a summary…</div>
+      <div id="overview-meta" style="font-size:.75rem; color:#aaa; margin-top:14px;"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h2 style="margin:0 0 4px;">Ask about your data</h2>
+        <button id="chat-clear" class="tab" style="border:1px solid #ddd; border-radius:8px; color:#888; padding:5px 12px; font-size:.8rem;">Clear</button>
+      </div>
+      <p style="font-size:.8rem; color:#aaa; margin:0 0 14px;">e.g. "Why is win rate low?" · "Which stage is stalling?" · "How are we pacing to the annual goal?"</p>
+      <div id="chat-log" style="display:flex; flex-direction:column; gap:12px; margin-bottom:14px; max-height:380px; overflow-y:auto;"></div>
+      <div style="display:flex; gap:8px;">
+        <input id="chat-input" type="text" placeholder="Ask a question…" autocomplete="off"
+          style="flex:1; padding:11px 14px; border:1.5px solid #ddd; border-radius:8px; font-size:.9rem; outline:none;" />
+        <button id="chat-send"
+          style="padding:11px 20px; border:none; border-radius:8px; background:#6366f1; color:#fff; font-weight:600; font-size:.9rem; cursor:pointer;">Send</button>
+      </div>
+    </div>
+  </div>
 </section>
 
 <script>
@@ -193,8 +192,8 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab => {
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
     // Charts created while hidden render at 0px — resize once visible
     chartInstances.forEach(c => c.resize());
-    // Lazy-load the AI overview the first time it's opened
-    if (tab.dataset.tab === 'overview') loadOverview();
+    // Lazy-load the AI overview the first time the Action Center is opened
+    if (tab.dataset.tab === 'actions') loadOverview();
   });
 });
 
@@ -509,9 +508,9 @@ async function loadDashboard(owner) {
   }));
 }
 
-// Initial load
+// Initial load — Dashboard is the landing tab; the AI summary lazy-loads
+// only when the user opens the Action Center (it's a paid call).
 loadDashboard('');
-loadOverview(); // Overview is the landing tab
 </script>
 </body>
 </html>
