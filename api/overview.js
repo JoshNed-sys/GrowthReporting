@@ -17,6 +17,10 @@ module.exports = async (req, res) => {
 
     const prompt =
 `You are a sharp revenue analyst writing an executive summary for the founder of this org.
+This is an EXECUTIVE-LEVEL dashboard — your reader is the founder/CEO and leadership team,
+not a sales rep. Write at the altitude of strategy and business health: focus on what moves
+the company forward, board-ready framing, and decisions only leadership can make. Skip
+rep-level minutiae unless it has company-level consequences.
 Evaluate the metrics against the company's stated business goals (below), and produce
 a scannable, highly actionable brief that frames everything in terms of progress toward
 those goals.
@@ -39,6 +43,17 @@ When a metric needed to judge a goal is missing from the data, say so briefly an
 
 === END GOALS ===
 
+=== INTERPRETIVE CONTEXT (apply this lens — do not treat raw numbers naively) ===
+- The company is a B2B fintech selling mid-market to enterprise, at SEED stage.
+- Pipeline is nascent: the majority was created in the last 60–90 days.
+- The 6% win rate and small CLOSED deal sizes are largely explained by pipeline IMMATURITY,
+  not a broken sales motion. Do NOT frame win rate as "deep execution risk" or "failure."
+- The ~$27.5K average OPEN pipeline deal size is the more meaningful current signal of deal quality.
+- A real win-rate signal won't emerge until Q3/Q4 2026 as the May pipeline ages — say so when win rate comes up.
+- Meeting momentum (22 in May, up from 4 in January) is a genuine positive leading indicator.
+Frame risks as "things to watch as pipeline matures," not as proof of a broken motion.
+=== END CONTEXT ===
+
 Using the metrics below, format your response EXACTLY like this, using markdown:
 
 **Bottom line:** <one punchy sentence. State that ARR is pacing at ~$365K, up from $250K last year (+46% YoY), then give the honest overall read on goal progress.>
@@ -59,6 +74,10 @@ Using the metrics below, format your response EXACTLY like this, using markdown:
 Rules: lead every bullet with the concrete figure. One line per bullet.
 Do NOT append goal names in parentheses, asterisks, or any trailing tags — write naturally.
 Make recommendations specific and immediately doable, not generic advice.
+TONE: measured, calm, and analytical — like a seasoned operator, not an alarm bell.
+Avoid dramatic or catastrophizing language ("dangerously behind", "deep execution risk",
+"pipeline math breaks down", "severe failure", "go nowhere"). State facts plainly and let
+the numbers speak; frame concerns as watch-items, not crises.
 Total under 230 words. Do not add any text outside this structure.
 
 METRICS (JSON):
