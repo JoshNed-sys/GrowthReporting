@@ -66,9 +66,12 @@ canvas { max-height: 280px; }
     </div>
 
     <div class="card" style="margin-top:16px;">
-      <h2 style="margin:0 0 4px;">Ask about your data</h2>
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h2 style="margin:0 0 4px;">Ask about your data</h2>
+        <button id="chat-clear" class="tab" style="border:1px solid #ddd; border-radius:8px; color:#888; padding:5px 12px; font-size:.8rem;">Clear</button>
+      </div>
       <p style="font-size:.8rem; color:#aaa; margin:0 0 14px;">e.g. "Why is win rate low?" · "Which stage is stalling?" · "How are we pacing to the annual goal?"</p>
-      <div id="chat-log" style="display:flex; flex-direction:column; gap:12px; margin-bottom:14px;"></div>
+      <div id="chat-log" style="display:flex; flex-direction:column; gap:12px; margin-bottom:14px; max-height:380px; overflow-y:auto;"></div>
       <div style="display:flex; gap:8px;">
         <input id="chat-input" type="text" placeholder="Ask a question…" autocomplete="off"
           style="flex:1; padding:11px 14px; border:1.5px solid #ddd; border-radius:8px; font-size:.9rem; outline:none;" />
@@ -202,8 +205,28 @@ function renderMarkdown(md) {
   const lines = md.trim().split('\n');
   let html = '', list = null; // list = 'ul' | 'ol' | null
   const closeList = () => { if (list) { html += `</${list}>`; list = null; } };
-  for (let raw of lines) {
+  const isTableRow = s => /^\|.*\|$/.test(s.trim());
+  const isTableSep = s => /^\|?[\s:|-]+\|?$/.test(s.trim()) && s.includes('-');
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
     const line = raw.trim();
+    // Table: a row line followed by a separator line
+    if (isTableRow(line) && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+      closeList();
+      const cells = r => r.trim().replace(/^\||\|$/g, '').split('|').map(c => inline(c.trim()));
+      const headers = cells(line);
+      let rows = '';
+      i += 2; // skip header + separator
+      while (i < lines.length && isTableRow(lines[i])) {
+        rows += '<tr>' + cells(lines[i]).map(c => `<td style="padding:6px 10px; border-top:1px solid #eee;">${c}</td>`).join('') + '</tr>';
+        i++;
+      }
+      i--; // step back; loop will increment
+      html += `<table style="border-collapse:collapse; margin:8px 0; font-size:.85rem; width:100%;">`
+        + '<tr>' + headers.map(h => `<th style="padding:6px 10px; text-align:left; border-bottom:2px solid #ddd;">${h}</th>`).join('') + '</tr>'
+        + rows + '</table>';
+      continue;
+    }
     if (!line) { closeList(); continue; }
     let m;
     if ((m = line.match(/^##+\s+(.*)/))) {
@@ -258,7 +281,7 @@ function addChatBubble(role, html) {
     padding:10px 14px; border-radius:12px; font-size:.9rem; line-height:1.55;`;
   wrap.innerHTML = html;
   log.appendChild(wrap);
-  log.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  log.scrollTop = log.scrollHeight; // scroll inside the chat box, not the page
   return wrap;
 }
 async function sendChat() {
@@ -286,6 +309,11 @@ async function sendChat() {
 document.getElementById('chat-send').addEventListener('click', sendChat);
 document.getElementById('chat-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') sendChat();
+});
+document.getElementById('chat-clear').addEventListener('click', () => {
+  chatHistory.length = 0;
+  document.getElementById('chat-log').innerHTML = '';
+  document.getElementById('chat-input').focus();
 });
 
 async function loadDashboard(owner) {
