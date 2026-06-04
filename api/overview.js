@@ -16,16 +16,30 @@ module.exports = async (req, res) => {
     const data = await buildDashboardData(owner);
 
     const prompt =
-`You are a sharp revenue analyst writing a brief for the founder of this org.
-Using ONLY the metrics below, write a concise executive overview in plain prose
-(no markdown headers). Cover, in this order:
+`You are a sharp revenue analyst writing an executive summary for the founder of this org.
+Using ONLY the metrics below, produce a scannable, highly actionable brief.
 
-1. Overall health in one or two sentences, referencing ARR and growth vs last year.
-2. What's working — cite specific numbers (pipeline coverage, win rate, MRR vs goal, meetings cadence).
-3. What's at risk or worth watching.
-4. Two or three concrete, specific recommendations.
+Format your response EXACTLY like this, using markdown:
 
-Be direct and specific with the actual figures. Keep it under 250 words.
+**Bottom line:** <one punchy sentence on overall health, citing ARR and growth vs last year>
+
+## What's working
+- <bullet with a specific number>
+- <bullet with a specific number>
+- <bullet with a specific number>
+
+## What's at risk
+- <bullet naming the risk + the number behind it>
+- <bullet naming the risk + the number behind it>
+
+## Do this next
+1. <imperative action starting with a verb> — <expected impact, tied to a metric>
+2. <imperative action starting with a verb> — <expected impact, tied to a metric>
+3. <imperative action starting with a verb> — <expected impact, tied to a metric>
+
+Rules: lead every bullet with the concrete figure. Keep each bullet to one line.
+Make recommendations specific and immediately doable, not generic advice.
+Total under 220 words. Do not add any text outside this structure.
 
 METRICS (JSON):
 ${JSON.stringify(data, null, 2)}`;
