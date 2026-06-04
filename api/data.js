@@ -19,7 +19,7 @@ const REVENUE = {
     { month: 'Feb 2026', revenue: 20000 },
     { month: 'Mar 2026', revenue: 20000 },
     { month: 'Apr 2026', revenue: 38250 },
-    { month: 'May 2026', revenue: 32810 },
+    { month: 'May 2026', revenue: 30470 },
     // Add new months here
   ],
 };
@@ -193,18 +193,13 @@ function monthSortKey(label) {
   return parseInt(yr) * 100 + months.indexOf(mon);
 }
 
-// ── Main handler ─────────────────────────────────────────────────────────────
-module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 's-maxage=300');
-
-  try {
+// ── Data builder (shared by /api/data and /api/overview) ─────────────────────
+async function buildDashboardData(owner) {
     const stagesCsv = PIPELINE_STAGES.map(s => `'${s}'`).join(',');
     const today = new Date().toISOString().slice(0, 10);
     const currentMonth = today.slice(0, 7);
 
-    // Owner filter (optional query param)
-    const owner = req.query && req.query.owner ? req.query.owner : null;
+    // Owner filter (optional)
     const ownerFilter = owner ? ` AND Owner.Name = '${owner}'` : '';
     const eventOwnerFilter = owner ? ` AND Owner.Name = '${owner}'` : '';
 
@@ -321,7 +316,7 @@ module.exports = async (req, res) => {
     // Opportunity Amount is annual contract value — divide by 12 for monthly revenue
     const closedWonValue = closedWon.reduce((a, o) => a + (o.Amount || 0), 0) / 12;
 
-    res.status(200).json({
+    return {
       generated: today,
       fiscalYear: FISCAL_YEAR,
       meetingsPerMonth,
@@ -338,9 +333,22 @@ module.exports = async (req, res) => {
         closedWonCount: closedWon.length,
         activeClients,
       },
-    });
+    };
+}
+
+// ── HTTP handler ─────────────────────────────────────────────────────────────
+module.exports = async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 's-maxage=300');
+  try {
+    const owner = req.query && req.query.owner ? req.query.owner : null;
+    const data = await buildDashboardData(owner);
+    res.status(200).json(data);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
+
+// Export for reuse by /api/overview
+module.exports.buildDashboardData = buildDashboardData;
