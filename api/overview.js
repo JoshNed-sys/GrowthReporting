@@ -41,22 +41,23 @@ When a metric needed to judge a goal is missing from the data, say so briefly an
 
 Using the metrics below, format your response EXACTLY like this, using markdown:
 
-**Bottom line:** <one punchy sentence on overall health vs goals, citing ARR and growth vs last year>
+**Bottom line:** <one punchy sentence. State that ARR is pacing at ~$365K, up from $250K last year (+46% YoY), then give the honest overall read on goal progress.>
 
 ## On track
 - <goal being met or progressing + the number proving it>
 - <goal being met or progressing + the number proving it>
 
 ## Off track
-- <goal that's behind + the number + which goal it maps to>
-- <goal that's behind + the number + which goal it maps to>
+- <goal that's behind + the number behind it>
+- <goal that's behind + the number behind it>
 
 ## Do this next
-1. <imperative action starting with a verb> — <which goal it moves + expected metric impact>
-2. <imperative action starting with a verb> — <which goal it moves + expected metric impact>
-3. <imperative action starting with a verb> — <which goal it moves + expected metric impact>
+1. <imperative action starting with a verb> — <expected metric impact>
+2. <imperative action starting with a verb> — <expected metric impact>
+3. <imperative action starting with a verb> — <expected metric impact>
 
-Rules: lead every bullet with the concrete figure and tie it to a named goal. One line per bullet.
+Rules: lead every bullet with the concrete figure. One line per bullet.
+Do NOT append goal names in parentheses, asterisks, or any trailing tags — write naturally.
 Make recommendations specific and immediately doable, not generic advice.
 Total under 230 words. Do not add any text outside this structure.
 
