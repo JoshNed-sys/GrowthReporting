@@ -73,11 +73,9 @@ canvas { max-height: 280px; }
       <div class="value" id="kpi-annual-rev">—</div>
       <div class="sub" id="kpi-annual-sub">Total revenue this fiscal year</div>
     </div>
-    <div class="kpi">
-      <div class="label">Closed Won MRR (YTD)</div>
-      <div class="value" id="kpi-closed-won">—</div>
-      <div class="sub" id="kpi-closed-won-count"></div>
-      <div class="sub" id="kpi-closed-won-qoq"></div>
+    <div class="kpi" style="grid-column: span 2;">
+      <div class="label" style="margin-bottom:8px;">Net New MRR Added (Monthly) <span id="kpi-closed-won-qoq" style="margin-left:8px; font-size:.75rem; font-weight:600;"></span></div>
+      <canvas id="newMRRChart" style="max-height:90px;"></canvas>
     </div>
     <div class="kpi">
       <div class="label">Average Customer Value</div>
@@ -379,10 +377,10 @@ async function loadDashboard(owner) {
   document.getElementById('kpi-coverage').textContent = coverage + 'x';
 
   // Closed won + avg deal size
-  if (D.summary.closedWonValue !== undefined) {
+  // Net New MRR chart + QoQ badge
+  const newMRRData = D.monthlyNewMRR || [];
+  if (newMRRData.length) {
     const closedWonQ2 = 6600;
-    document.getElementById('kpi-closed-won').textContent = fmt(D.summary.closedWonValue);
-    document.getElementById('kpi-closed-won-count').textContent = (D.summary.closedWonCount || 0) + ' deals closed · new MRR/mo';
     const cwQoqPct = PREV_QUARTER_CLOSED_WON > 0
       ? Math.round((closedWonQ2 - PREV_QUARTER_CLOSED_WON) / PREV_QUARTER_CLOSED_WON * 100)
       : null;
@@ -390,10 +388,27 @@ async function loadDashboard(owner) {
       const qoqEl = document.getElementById('kpi-closed-won-qoq');
       qoqEl.textContent = `${cwQoqPct >= 0 ? '+' : ''}${cwQoqPct}% QoQ`;
       qoqEl.style.color = cwQoqPct >= 0 ? '#16a34a' : '#dc2626';
-      qoqEl.style.fontWeight = '600';
-      qoqEl.style.fontSize = '.8rem';
-      qoqEl.style.marginTop = '4px';
     }
+    chartInstances.push(new Chart(document.getElementById('newMRRChart'), {
+      type: 'bar',
+      data: {
+        labels: newMRRData.map(m => m.month),
+        datasets: [{
+          data: newMRRData.map(m => m.newMRR),
+          backgroundColor: newMRRData.map(m => m.newMRR > 0 ? '#6366f1' : '#e5e7eb'),
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { label: ctx => '$' + ctx.parsed.y.toLocaleString() + ' MRR' }
+        }},
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          y: { beginAtZero: true, ticks: { callback: v => '$' + (v/1e3).toFixed(0)+'K' }, grid: { color: '#f0f0f0' } }
+        }
+      }
+    }));
   }
 
   // Win rate
