@@ -77,6 +77,7 @@ canvas { max-height: 280px; }
       <div class="label">Closed Won MRR (YTD)</div>
       <div class="value" id="kpi-closed-won">—</div>
       <div class="sub" id="kpi-closed-won-count"></div>
+      <div class="sub" id="kpi-closed-won-qoq"></div>
     </div>
     <div class="kpi">
       <div class="label">Average Customer Value</div>
@@ -381,11 +382,15 @@ async function loadDashboard(owner) {
   if (D.summary.closedWonValue !== undefined) {
     const closedWonQ2 = 6600;
     document.getElementById('kpi-closed-won').textContent = fmt(D.summary.closedWonValue);
+    document.getElementById('kpi-closed-won-count').textContent = (D.summary.closedWonCount || 0) + ' deals closed · new MRR/mo';
     const cwQoqPct = PREV_QUARTER_CLOSED_WON > 0
       ? Math.round((closedWonQ2 - PREV_QUARTER_CLOSED_WON) / PREV_QUARTER_CLOSED_WON * 100)
       : null;
-    const cwQoqStr = cwQoqPct !== null ? ` · ${cwQoqPct >= 0 ? '+' : ''}${cwQoqPct}% QoQ` : '';
-    document.getElementById('kpi-closed-won-count').textContent = (D.summary.closedWonCount || 0) + ' deals closed · new MRR/mo' + cwQoqStr;
+    if (cwQoqPct !== null) {
+      const qoqEl = document.getElementById('kpi-closed-won-qoq');
+      qoqEl.textContent = `${cwQoqPct >= 0 ? '+' : ''}${cwQoqPct}% QoQ`;
+      qoqEl.className = 'sub ' + (cwQoqPct >= 0 ? 'up' : 'down');
+    }
   }
 
   // Win rate
