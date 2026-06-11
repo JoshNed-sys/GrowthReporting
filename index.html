@@ -182,6 +182,8 @@ let chartInstances = [];
 
 // ARR at end of previous quarter — for QoQ comparison
 const PREV_QUARTER_ARR = 348120;
+// Closed Won net new MRR added in previous quarter — for QoQ comparison
+const PREV_QUARTER_CLOSED_WON = 4260;
 
 // ── Tab switching ──
 document.querySelectorAll('.tab[data-tab]').forEach(tab => {
@@ -377,8 +379,13 @@ async function loadDashboard(owner) {
 
   // Closed won + avg deal size
   if (D.summary.closedWonValue !== undefined) {
+    const closedWonQ2 = 6600;
     document.getElementById('kpi-closed-won').textContent = fmt(D.summary.closedWonValue);
-    document.getElementById('kpi-closed-won-count').textContent = (D.summary.closedWonCount || 0) + ' deals closed · new MRR/mo';
+    const cwQoqPct = PREV_QUARTER_CLOSED_WON > 0
+      ? Math.round((closedWonQ2 - PREV_QUARTER_CLOSED_WON) / PREV_QUARTER_CLOSED_WON * 100)
+      : null;
+    const cwQoqStr = cwQoqPct !== null ? ` · ${cwQoqPct >= 0 ? '+' : ''}${cwQoqPct}% QoQ` : '';
+    document.getElementById('kpi-closed-won-count').textContent = (D.summary.closedWonCount || 0) + ' deals closed · new MRR/mo' + cwQoqStr;
   }
 
   // Win rate
