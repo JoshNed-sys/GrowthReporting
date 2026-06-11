@@ -56,7 +56,7 @@ canvas { max-height: 280px; }
 <section class="tab-panel active" id="tab-dashboard">
 
   <div class="section-label">Revenue</div>
-  <div class="kpi-row5" id="revenue-section" style="display:none">
+  <div class="kpi-row4" id="revenue-section" style="display:none">
     <div class="kpi">
       <div class="label">MRR</div>
       <div class="value" id="kpi-monthly-rev">—</div>
@@ -73,14 +73,19 @@ canvas { max-height: 280px; }
       <div class="value" id="kpi-annual-rev">—</div>
       <div class="sub" id="kpi-annual-sub">Total revenue this fiscal year</div>
     </div>
-    <div class="kpi" style="grid-column: span 2;">
-      <div class="label" style="margin-bottom:8px;">Net New MRR Added (Monthly) <span id="kpi-closed-won-qoq" style="margin-left:8px; font-size:.75rem; font-weight:600;"></span></div>
-      <canvas id="newMRRChart" style="max-height:90px;"></canvas>
-    </div>
     <div class="kpi">
       <div class="label">Average Customer Value</div>
       <div class="value" id="kpi-acv">—</div>
       <div class="sub" id="kpi-acv-sub">ARR per active client</div>
+    </div>
+  </div>
+  <div class="charts" id="revenue-chart-section" style="display:none; grid-template-columns: 1fr;">
+    <div class="card">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+        <h2 style="margin:0;">Net New MRR Added (Monthly)</h2>
+        <span id="kpi-closed-won-qoq" style="font-size:.75rem; font-weight:600;"></span>
+      </div>
+      <canvas id="newMRRChart" style="max-height:160px;"></canvas>
     </div>
   </div>
 
@@ -342,6 +347,7 @@ async function loadDashboard(owner) {
   // Revenue KPIs
   if (D.revenue) {
     document.getElementById('revenue-section').style.display = 'grid';
+    document.getElementById('revenue-chart-section').style.display = 'grid';
     const r = D.revenue;
     document.getElementById('kpi-monthly-rev').textContent = fmt(r.currentMonthRevenue);
     document.getElementById('kpi-monthly-goal').textContent = `${r.monthlyPct}% of ${fmt(r.monthlyGoal)} goal`;
