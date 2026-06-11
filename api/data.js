@@ -22,6 +22,15 @@ const REVENUE = {
     { month: 'May 2026', revenue: 33000 },
     { month: 'June 2026', revenue: 35610 },
   ],
+  // Net new MRR added each month — update monthly
+  monthlyNewMRR: [
+    { month: 'Jan 2026', newMRR: 1420 },
+    { month: 'Feb 2026', newMRR: 1420 },
+    { month: 'Mar 2026', newMRR: 1420 },
+    { month: 'Apr 2026', newMRR: 0 },
+    { month: 'May 2026', newMRR: 3800 },
+    { month: 'Jun 2026', newMRR: 2800 },
+  ],
 };
 
 // ── Composio SOQL helper ─────────────────────────────────────────────────────
@@ -322,6 +331,7 @@ async function buildDashboardData(owner) {
       meetingsPerMonth,
       pipelineByStage,
       pipelineGrowth,
+      monthlyNewMRR: REVENUE.monthlyNewMRR,
       revenue: qbRevenue,
       summary: {
         totalOpenPipelineValue: totalPipelineValue,
