@@ -413,7 +413,6 @@ async function loadDashboard(owner) {
 
     chartInstances.push(new Chart(document.getElementById('newMRRChart'), {
       type: 'bar',
-      plugins: [momPlugin],
       data: {
         labels: qLabels,
         datasets: [{
