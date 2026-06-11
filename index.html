@@ -389,7 +389,10 @@ async function loadDashboard(owner) {
     if (cwQoqPct !== null) {
       const qoqEl = document.getElementById('kpi-closed-won-qoq');
       qoqEl.textContent = `${cwQoqPct >= 0 ? '+' : ''}${cwQoqPct}% QoQ`;
-      qoqEl.className = 'sub ' + (cwQoqPct >= 0 ? 'up' : 'down');
+      qoqEl.style.color = cwQoqPct >= 0 ? '#16a34a' : '#dc2626';
+      qoqEl.style.fontWeight = '600';
+      qoqEl.style.fontSize = '.8rem';
+      qoqEl.style.marginTop = '4px';
     }
   }
 
