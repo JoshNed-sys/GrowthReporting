@@ -180,8 +180,8 @@ canvas { max-height: 280px; }
 let currentOwner = '';
 let chartInstances = [];
 
-// Where ARR ended last fiscal year — for YoY comparison
-const LAST_YEAR_ARR = 250000;
+// ARR at end of previous quarter — for QoQ comparison
+const PREV_QUARTER_ARR = 348120;
 
 // ── Tab switching ──
 document.querySelectorAll('.tab[data-tab]').forEach(tab => {
@@ -351,14 +351,12 @@ async function loadDashboard(owner) {
     const mrrAnnualized = r.currentMonthRevenue * 12;
     const arr = (r.arr !== undefined && r.arr !== null) ? r.arr : mrrAnnualized;
     document.getElementById('kpi-arr').textContent = fmt(arr);
-    // ARR compared to where we ended last year
+    // ARR QoQ comparison
     const arrSub = document.getElementById('kpi-arr-sub');
-    const arrYoyPct = LAST_YEAR_ARR > 0
-      ? Math.round((arr - LAST_YEAR_ARR) / LAST_YEAR_ARR * 100)
-      : null;
-    if (arrYoyPct !== null) {
-      arrSub.textContent = `${arrYoyPct >= 0 ? '+' : ''}${arrYoyPct}% vs last year`;
-      arrSub.className = 'sub ' + (arrYoyPct >= 0 ? 'up' : 'down');
+    if (PREV_QUARTER_ARR > 0) {
+      const qoqPct = Math.round((arr - PREV_QUARTER_ARR) / PREV_QUARTER_ARR * 100);
+      arrSub.textContent = `${qoqPct >= 0 ? '+' : ''}${qoqPct}% QoQ`;
+      arrSub.className = 'sub ' + (qoqPct >= 0 ? 'up' : 'down');
     }
 
     // Average customer value = ARR / active clients
