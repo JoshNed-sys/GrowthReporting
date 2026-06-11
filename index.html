@@ -383,9 +383,24 @@ async function loadDashboard(owner) {
   document.getElementById('kpi-coverage').textContent = coverage + 'x';
 
   // Closed won + avg deal size
-  // Net New MRR chart + QoQ badge
+  // Net New MRR chart — aggregated by quarter
   const newMRRData = D.monthlyNewMRR || [];
   if (newMRRData.length) {
+    const monthToQ = m => {
+      const mon = m.slice(0, 3);
+      if (['Jan','Feb','Mar'].includes(mon)) return 'Q1';
+      if (['Apr','May','Jun'].includes(mon)) return 'Q2';
+      if (['Jul','Aug','Sep'].includes(mon)) return 'Q3';
+      return 'Q4';
+    };
+    const qTotals = {};
+    newMRRData.forEach(m => {
+      const q = monthToQ(m.month);
+      qTotals[q] = (qTotals[q] || 0) + m.newMRR;
+    });
+    const qLabels = Object.keys(qTotals);
+    const qValues = qLabels.map(q => qTotals[q]);
+
     const closedWonQ2 = 6600;
     const cwQoqPct = PREV_QUARTER_CLOSED_WON > 0
       ? Math.round((closedWonQ2 - PREV_QUARTER_CLOSED_WON) / PREV_QUARTER_CLOSED_WON * 100)
@@ -395,23 +410,26 @@ async function loadDashboard(owner) {
       qoqEl.textContent = `${cwQoqPct >= 0 ? '+' : ''}${cwQoqPct}% QoQ`;
       qoqEl.style.color = cwQoqPct >= 0 ? '#16a34a' : '#dc2626';
     }
+
     chartInstances.push(new Chart(document.getElementById('newMRRChart'), {
       type: 'bar',
+      plugins: [momPlugin],
       data: {
-        labels: newMRRData.map(m => m.month),
+        labels: qLabels,
         datasets: [{
-          data: newMRRData.map(m => m.newMRR),
-          backgroundColor: newMRRData.map(m => m.newMRR > 0 ? '#6366f1' : '#e5e7eb'),
+          data: qValues,
+          backgroundColor: '#6366f1',
           borderRadius: 4,
         }]
       },
       options: {
+        layout: { padding: { top: 24 } },
         plugins: { legend: { display: false }, tooltip: {
-          callbacks: { label: ctx => '$' + ctx.parsed.y.toLocaleString() + ' MRR' }
+          callbacks: { label: ctx => '$' + ctx.parsed.y.toLocaleString() + ' net new MRR' }
         }},
         scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-          y: { beginAtZero: true, ticks: { callback: v => '$' + (v/1e3).toFixed(0)+'K' }, grid: { color: '#f0f0f0' } }
+          x: { grid: { display: false }, ticks: { font: { size: 12 } } },
+          y: { beginAtZero: true, ticks: { callback: v => '$' + (v/1e3).toFixed(1)+'K' }, grid: { color: '#f0f0f0' } }
         }
       }
     }));
