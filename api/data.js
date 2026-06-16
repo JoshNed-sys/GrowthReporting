@@ -20,6 +20,7 @@ const REVENUE = {
     { month: 'Mar 2026', revenue: 20000 },
     { month: 'Apr 2026', revenue: 38250 },
     { month: 'May 2026', revenue: 33000 },
+    { month: 'June 2026', revenue: 32580 },
   ],
   // Net new MRR added each month — update monthly
   monthlyNewMRR: [
@@ -28,6 +29,7 @@ const REVENUE = {
     { month: 'Mar 2026', newMRR: 1420 },
     { month: 'Apr 2026', newMRR: 0 },
     { month: 'May 2026', newMRR: 3800 },
+    { month: 'May 2026', newMRR: 2800 },
   ],
 };
 
