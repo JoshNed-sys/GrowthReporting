@@ -297,10 +297,11 @@ async function buildDashboardData(owner) {
     const avgDaysLeadToMeetingSampleSize = kpi_daysArr.length;
 
     // ── KPI: Lead Conversion Rate ─────────────────────────────────────────────
-    // Fully self-contained. Converted leads this FY / total leads created this FY.
-    // Uses only Lead data — no dependency on Task logging behavior.
+    // Converted leads this FY / total leads touched this FY.
+    // NOTE: CreatedDate is a DateTime field — requires T00:00:00Z format, not plain date.
+    // ConvertedDate is a Date field — plain date format works fine.
     const kpi_allLeads = await soql(
-      `SELECT Id FROM Lead WHERE CreatedDate >= ${FISCAL_YEAR}-01-01 AND CreatedDate <= ${today} LIMIT 2000`
+      `SELECT Id FROM Lead WHERE CreatedDate >= ${FISCAL_YEAR}-01-01T00:00:00Z AND CreatedDate <= ${today}T23:59:59Z LIMIT 2000`
     );
     const kpi_convertedLeads = await soql(
       `SELECT Id FROM Lead WHERE IsConverted = true AND ConvertedDate >= ${FISCAL_YEAR}-01-01 AND ConvertedDate <= ${today} LIMIT 2000`
