@@ -297,17 +297,14 @@ async function buildDashboardData(owner) {
     const avgDaysLeadToMeetingSampleSize = kpi_daysArr.length;
 
     // ── KPI: Lead Conversion Rate ─────────────────────────────────────────────
-    // Converted leads this FY / leads with at least one task (leads touched).
-    // Filter tasks by WhoId LIKE '00Q%' — all Salesforce Lead IDs start with '00Q'.
-    // This avoids subquery issues on polymorphic WhoId and ID list length limits.
-    const kpi_touchedTasksResult = await soql(
-      `SELECT WhoId FROM Task WHERE WhoId LIKE '00Q%' LIMIT 2000`
+    // Uses Lead.LastActivityDate — Salesforce auto-populates this whenever any
+    // task or event is logged against the lead. No Task query needed.
+    // leadsTouched = leads with any activity. convertedLeads = subset that converted.
+    const kpi_leadActivityResult = await soql(
+      `SELECT Id, IsConverted FROM Lead WHERE LastActivityDate != null LIMIT 2000`
     );
-    const kpi_convertedLeads = await soql(
-      `SELECT Id FROM Lead WHERE IsConverted = true LIMIT 2000`
-    );
-    const leadsTouched = new Set(kpi_touchedTasksResult.map(t => t.WhoId)).size;
-    const convertedLeads = kpi_convertedLeads.length;
+    const leadsTouched = kpi_leadActivityResult.length;
+    const convertedLeads = kpi_leadActivityResult.filter(l => l.IsConverted === true).length;
     const leadConversionRate = leadsTouched > 0
       ? Math.round((convertedLeads / leadsTouched) * 100)
       : null;
