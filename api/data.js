@@ -288,19 +288,16 @@ async function buildDashboardData(owner) {
       : null;
 
     // 5e. Outreach-to-meeting rate — meetings booked / unique leads touched (%)
-    // Query tasks on all leads created this FY by fetching lead IDs first.
+    // Salesforce rejects mixed Lead+Contact IDs in a polymorphic WhoId IN clause.
+    // Use Lead IDs only here (tasks logged before conversion) — this was working correctly.
     const allLeadRecords = await soql(
-      `SELECT Id, ConvertedContactId FROM Lead WHERE CreatedDate >= ${FISCAL_YEAR}-01-01 AND CreatedDate <= ${today} LIMIT 2000`
+      `SELECT Id FROM Lead WHERE CreatedDate >= ${FISCAL_YEAR}-01-01 AND CreatedDate <= ${today} LIMIT 2000`
     );
-    // Include both the Lead ID and its ConvertedContactId (if converted) to catch all tasks
-    const allLeadWhoIds = [...new Set(
-      allLeadRecords.flatMap(l => [l.Id, l.ConvertedContactId].filter(Boolean))
-    )];
-    const allLeadWhoIdsCsv = allLeadWhoIds.length
-      ? allLeadWhoIds.map(id => `'${id}'`).join(',')
+    const allLeadIdsCsv = allLeadRecords.length
+      ? allLeadRecords.map(l => `'${l.Id}'`).join(',')
       : "'NONE'";
     const leadsTouchedResult = await soql(
-      `SELECT COUNT_DISTINCT(WhoId) cnt FROM Task WHERE WhoId IN (${allLeadWhoIdsCsv}) AND ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today}`
+      `SELECT COUNT_DISTINCT(WhoId) cnt FROM Task WHERE WhoId IN (${allLeadIdsCsv}) AND ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today}`
     );
     const leadsTouched = leadsTouchedResult.length ? (leadsTouchedResult[0].cnt || 0) : 0;
 
