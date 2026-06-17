@@ -126,9 +126,9 @@ canvas { max-height: 280px; }
       <div class="sub" id="kpi-avg"></div>
     </div>
     <div class="kpi">
-      <div class="label">Avg Touches to Meeting</div>
-      <div class="value" id="kpi-avg-touches">—</div>
-      <div class="sub" id="kpi-avg-touches-sub">touches per converted lead</div>
+      <div class="label">Avg Days: Lead to First Meeting</div>
+      <div class="value" id="kpi-days-to-meeting">—</div>
+      <div class="sub" id="kpi-days-to-meeting-sub">days from lead created to first meeting</div>
     </div>
     <div class="kpi">
       <div class="label">Outreach-to-Meeting Rate</div>
@@ -444,9 +444,9 @@ async function loadDashboard(owner) {
   document.getElementById('kpi-meetings').textContent = D.summary.ytdMeetings;
   document.getElementById('kpi-avg').textContent = 'Avg ' + D.summary.avgMonthlyMeetings + '/mo';
 
-  if (D.summary.avgTouchesToMeeting !== null && D.summary.avgTouchesToMeeting !== undefined) {
-    document.getElementById('kpi-avg-touches').textContent = D.summary.avgTouchesToMeeting;
-    document.getElementById('kpi-avg-touches-sub').textContent = 'from ' + (D.summary.convertedLeads || 0) + ' converted leads this FY';
+  if (D.summary.avgDaysLeadToMeeting !== null && D.summary.avgDaysLeadToMeeting !== undefined) {
+    document.getElementById('kpi-days-to-meeting').textContent = D.summary.avgDaysLeadToMeeting + 'd';
+    document.getElementById('kpi-days-to-meeting-sub').textContent = 'across ' + (D.summary.convertedLeads || 0) + ' converted leads this FY';
   }
   if (D.summary.outreachToMeetingRate !== null && D.summary.outreachToMeetingRate !== undefined) {
     document.getElementById('kpi-outreach-rate').textContent = D.summary.outreachToMeetingRate + '%';
