@@ -297,14 +297,17 @@ async function buildDashboardData(owner) {
     const avgDaysLeadToMeetingSampleSize = kpi_daysArr.length;
 
     // ── KPI: Lead Conversion Rate ─────────────────────────────────────────────
-    // Uses Lead.LastActivityDate — Salesforce auto-populates this whenever any
-    // task or event is logged against the lead. No Task query needed.
-    // leadsTouched = leads with any activity. convertedLeads = subset that converted.
-    const kpi_leadActivityResult = await soql(
-      `SELECT Id, IsConverted FROM Lead WHERE LastActivityDate != null LIMIT 2000`
+    // COUNT_DISTINCT with subquery on WhoId is the only form that works through Composio.
+    // Non-aggregate SELECT WhoId with same filter returns [] — aggregate form returns correctly.
+    const kpi_leadsTouchedResult = await soql(
+      `SELECT COUNT_DISTINCT(WhoId) cnt FROM Task WHERE WhoId IN (SELECT Id FROM Lead) AND ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today}`
     );
-    const leadsTouched = kpi_leadActivityResult.length;
-    const convertedLeads = kpi_leadActivityResult.filter(l => l.IsConverted === true).length;
+    const leadsTouched = kpi_leadsTouchedResult.length ? (kpi_leadsTouchedResult[0].cnt || 0) : 0;
+
+    const kpi_convertedLeadsResult = await soql(
+      `SELECT Id FROM Lead WHERE IsConverted = true LIMIT 2000`
+    );
+    const convertedLeads = kpi_convertedLeadsResult.length;
     const leadConversionRate = leadsTouched > 0
       ? Math.round((convertedLeads / leadsTouched) * 100)
       : null;
