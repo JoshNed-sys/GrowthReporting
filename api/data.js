@@ -297,19 +297,19 @@ async function buildDashboardData(owner) {
     const avgDaysLeadToMeetingSampleSize = kpi_daysArr.length;
 
     // ── KPI: Lead Conversion Rate ─────────────────────────────────────────────
-    // Converted leads this FY / total leads touched this FY.
-    // NOTE: CreatedDate is a DateTime field — requires T00:00:00Z format, not plain date.
-    // ConvertedDate is a Date field — plain date format works fine.
-    const kpi_allLeads = await soql(
-      `SELECT Id FROM Lead WHERE CreatedDate >= ${FISCAL_YEAR}-01-01T00:00:00Z AND CreatedDate <= ${today}T23:59:59Z LIMIT 2000`
+    // Converted leads this FY / leads with at least one task (leads touched).
+    // Filter tasks by WhoId LIKE '00Q%' — all Salesforce Lead IDs start with '00Q'.
+    // This avoids subquery issues on polymorphic WhoId and ID list length limits.
+    const kpi_touchedTasksResult = await soql(
+      `SELECT WhoId FROM Task WHERE WhoId LIKE '00Q%' AND ActivityDate >= ${FISCAL_YEAR}-01-01 LIMIT 2000`
     );
     const kpi_convertedLeads = await soql(
-      `SELECT Id FROM Lead WHERE IsConverted = true AND ConvertedDate >= ${FISCAL_YEAR}-01-01 AND ConvertedDate <= ${today} LIMIT 2000`
+      `SELECT Id FROM Lead WHERE IsConverted = true LIMIT 2000`
     );
-    const totalLeads = kpi_allLeads.length;
+    const leadsTouched = new Set(kpi_touchedTasksResult.map(t => t.WhoId)).size;
     const convertedLeads = kpi_convertedLeads.length;
-    const leadConversionRate = totalLeads > 0
-      ? Math.round((convertedLeads / totalLeads) * 100)
+    const leadConversionRate = leadsTouched > 0
+      ? Math.round((convertedLeads / leadsTouched) * 100)
       : null;
 
     // ── Pipeline by stage ──
@@ -391,7 +391,7 @@ async function buildDashboardData(owner) {
         activeClients,
         avgDaysLeadToMeeting,
         avgDaysLeadToMeetingSampleSize,
-        totalLeads,
+        leadsTouched,
         convertedLeads,
         leadConversionRate,
       },
