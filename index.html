@@ -450,7 +450,11 @@ async function loadDashboard(owner) {
   }
   if (D.summary.leadConversionRate !== null && D.summary.leadConversionRate !== undefined) {
     document.getElementById('kpi-lead-conv-rate').textContent = D.summary.leadConversionRate + '%';
-    document.getElementById('kpi-lead-conv-rate-sub').textContent = (D.summary.convertedLeads || 0) + ' converted of ' + (D.summary.totalLeads || 0) + ' leads';
+    const touched = D.summary.leadsTouched;
+    const subText = touched
+      ? (D.summary.convertedLeads || 0) + ' converted of ' + touched + ' leads touched'
+      : (D.summary.convertedLeads || 0) + ' converted leads';
+    document.getElementById('kpi-lead-conv-rate-sub').textContent = subText;
   }
 
   // MTD: last entry in pipelineGrowth
