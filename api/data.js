@@ -301,7 +301,7 @@ async function buildDashboardData(owner) {
     // Filter tasks by WhoId LIKE '00Q%' — all Salesforce Lead IDs start with '00Q'.
     // This avoids subquery issues on polymorphic WhoId and ID list length limits.
     const kpi_touchedTasksResult = await soql(
-      `SELECT WhoId FROM Task WHERE WhoId LIKE '00Q%' AND ActivityDate >= ${FISCAL_YEAR}-01-01 LIMIT 2000`
+      `SELECT WhoId FROM Task WHERE WhoId LIKE '00Q%' LIMIT 2000`
     );
     const kpi_convertedLeads = await soql(
       `SELECT Id FROM Lead WHERE IsConverted = true LIMIT 2000`
