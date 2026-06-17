@@ -266,7 +266,7 @@ async function buildDashboardData(owner) {
     const activeClients = activeClientsResult.length ? (activeClientsResult[0].accts || 0) : 0;
 
     // 5d. Avg days from lead created to first meeting on the converted account.
-    // Uses ConvertedAccountId to find the account, then looks up the earliest Event on it.
+    // Avoids SOQL aggregate functions (MIN/GROUP BY fail through Composio) — calculates in JS.
     const convertedLeadRecords = await soql(
       `SELECT Id, CreatedDate, ConvertedAccountId FROM Lead WHERE IsConverted = true AND ConvertedDate >= ${FISCAL_YEAR}-01-01 AND ConvertedDate <= ${today} LIMIT 2000`
     );
@@ -276,12 +276,16 @@ async function buildDashboardData(owner) {
       ? convertedAccountIds.map(id => `'${id}'`).join(',')
       : "'NONE'";
 
-    // First meeting date per converted account
-    const firstMeetingsResult = await soql(
-      `SELECT AccountId, MIN(ActivityDate) firstMeeting FROM Event WHERE AccountId IN (${convertedAccountIdsCsv}) AND ActivityDate >= ${FISCAL_YEAR}-01-01 GROUP BY AccountId`
+    // Fetch all events on converted accounts, find earliest per account in JS
+    const convertedAccountEvents = await soql(
+      `SELECT AccountId, ActivityDate FROM Event WHERE AccountId IN (${convertedAccountIdsCsv}) AND ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} LIMIT 2000`
     );
     const firstMeetingByAccount = {};
-    firstMeetingsResult.forEach(r => { firstMeetingByAccount[r.AccountId] = r.firstMeeting; });
+    convertedAccountEvents.forEach(e => {
+      if (!firstMeetingByAccount[e.AccountId] || e.ActivityDate < firstMeetingByAccount[e.AccountId]) {
+        firstMeetingByAccount[e.AccountId] = e.ActivityDate;
+      }
+    });
 
     const leadCreatedByAccount = {};
     convertedLeadRecords.forEach(l => {
@@ -298,17 +302,17 @@ async function buildDashboardData(owner) {
       : null;
 
     // 5e. Outreach-to-meeting rate — meetings booked / unique leads touched (%)
-    // WhoId on Tasks is polymorphic; pass Lead IDs explicitly (no subquery).
+    // Avoids COUNT_DISTINCT aggregate — fetches WhoId values and dedupes in JS.
     const allLeadRecords = await soql(
       `SELECT Id FROM Lead WHERE CreatedDate >= ${FISCAL_YEAR}-01-01 AND CreatedDate <= ${today} LIMIT 2000`
     );
     const allLeadIdsCsv = allLeadRecords.length
       ? allLeadRecords.map(l => `'${l.Id}'`).join(',')
       : "'NONE'";
-    const leadsTouchedResult = await soql(
-      `SELECT COUNT_DISTINCT(WhoId) cnt FROM Task WHERE WhoId IN (${allLeadIdsCsv}) AND ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today}`
+    const leadTasksResult = await soql(
+      `SELECT WhoId FROM Task WHERE WhoId IN (${allLeadIdsCsv}) AND ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} LIMIT 2000`
     );
-    const leadsTouched = leadsTouchedResult.length ? (leadsTouchedResult[0].cnt || 0) : 0;
+    const leadsTouched = new Set(leadTasksResult.map(t => t.WhoId)).size;
 
     // ── Pipeline by stage ──
     const stageTotals = {};
