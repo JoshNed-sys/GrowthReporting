@@ -265,23 +265,42 @@ async function buildDashboardData(owner) {
     );
     const activeClients = activeClientsResult.length ? (activeClientsResult[0].accts || 0) : 0;
 
-    // 5d. Avg touches to meeting — total tasks on converted leads / converted leads this FY
-    const convertedLeadsResult = await soql(
-      `SELECT COUNT(Id) cnt FROM Lead WHERE IsConverted = true AND ConvertedDate >= ${FISCAL_YEAR}-01-01 AND ConvertedDate <= ${today}`
+    // 5d. Avg touches to meeting — tasks on the Contact created from lead conversion.
+    // When a lead converts, Salesforce re-parents its tasks to the new Contact (WhoId = ContactId).
+    // So we fetch ConvertedContactId from converted leads and count tasks on those contacts.
+    const convertedLeadRecords = await soql(
+      `SELECT Id, ConvertedContactId FROM Lead WHERE IsConverted = true AND ConvertedDate >= ${FISCAL_YEAR}-01-01 AND ConvertedDate <= ${today} LIMIT 2000`
     );
-    const convertedLeads = convertedLeadsResult.length ? (convertedLeadsResult[0].cnt || 0) : 0;
+    const convertedLeads = convertedLeadRecords.length;
+    const convertedContactIds = convertedLeadRecords
+      .map(l => l.ConvertedContactId)
+      .filter(Boolean);
+    const convertedContactIdsCsv = convertedContactIds.length
+      ? convertedContactIds.map(id => `'${id}'`).join(',')
+      : "'NONE'";
 
-    const tasksOnLeadsResult = await soql(
-      `SELECT COUNT(Id) cnt FROM Task WHERE WhoId IN (SELECT Id FROM Lead WHERE IsConverted = true AND ConvertedDate >= ${FISCAL_YEAR}-01-01 AND ConvertedDate <= ${today})`
+    const tasksOnContactsResult = await soql(
+      `SELECT COUNT(Id) cnt FROM Task WHERE WhoId IN (${convertedContactIdsCsv})`
     );
-    const tasksOnLeads = tasksOnLeadsResult.length ? (tasksOnLeadsResult[0].cnt || 0) : 0;
+    const tasksOnLeads = tasksOnContactsResult.length ? (tasksOnContactsResult[0].cnt || 0) : 0;
     const avgTouchesToMeeting = convertedLeads > 0
       ? Math.round((tasksOnLeads / convertedLeads) * 10) / 10
       : null;
 
     // 5e. Outreach-to-meeting rate — meetings booked / unique leads touched (%)
+    // Query tasks on all leads created this FY by fetching lead IDs first.
+    const allLeadRecords = await soql(
+      `SELECT Id, ConvertedContactId FROM Lead WHERE CreatedDate >= ${FISCAL_YEAR}-01-01 AND CreatedDate <= ${today} LIMIT 2000`
+    );
+    // Include both the Lead ID and its ConvertedContactId (if converted) to catch all tasks
+    const allLeadWhoIds = [...new Set(
+      allLeadRecords.flatMap(l => [l.Id, l.ConvertedContactId].filter(Boolean))
+    )];
+    const allLeadWhoIdsCsv = allLeadWhoIds.length
+      ? allLeadWhoIds.map(id => `'${id}'`).join(',')
+      : "'NONE'";
     const leadsTouchedResult = await soql(
-      `SELECT COUNT_DISTINCT(WhoId) cnt FROM Task WHERE WhoId IN (SELECT Id FROM Lead) AND ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today}`
+      `SELECT COUNT_DISTINCT(WhoId) cnt FROM Task WHERE WhoId IN (${allLeadWhoIdsCsv}) AND ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today}`
     );
     const leadsTouched = leadsTouchedResult.length ? (leadsTouchedResult[0].cnt || 0) : 0;
 
