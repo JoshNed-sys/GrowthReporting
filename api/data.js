@@ -301,8 +301,9 @@ async function buildDashboardData(owner) {
       ? Math.round(daysToMeetingArr.reduce((a, b) => a + b, 0) / daysToMeetingArr.length)
       : null;
 
-    // 5e. Outreach-to-meeting rate — meetings booked / unique leads touched (%)
-    // Avoids COUNT_DISTINCT aggregate — fetches WhoId values and dedupes in JS.
+    // 5e. Leads touched — unique leads with any task logged this FY.
+    // No ActivityDate filter: Task.ActivityDate is often null/unset by reps.
+    // Scope by fetching lead IDs first (no subquery on polymorphic WhoId).
     const allLeadRecords = await soql(
       `SELECT Id FROM Lead WHERE CreatedDate >= ${FISCAL_YEAR}-01-01 AND CreatedDate <= ${today} LIMIT 2000`
     );
@@ -310,7 +311,7 @@ async function buildDashboardData(owner) {
       ? allLeadRecords.map(l => `'${l.Id}'`).join(',')
       : "'NONE'";
     const leadTasksResult = await soql(
-      `SELECT WhoId FROM Task WHERE WhoId IN (${allLeadIdsCsv}) AND ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} LIMIT 2000`
+      `SELECT WhoId FROM Task WHERE WhoId IN (${allLeadIdsCsv}) LIMIT 2000`
     );
     const leadsTouched = new Set(leadTasksResult.map(t => t.WhoId)).size;
 
@@ -394,7 +395,7 @@ async function buildDashboardData(owner) {
         avgDaysLeadToMeeting,
         convertedLeads,
         leadsTouched,
-        outreachToMeetingRate: leadsTouched > 0 ? Math.round((ytdMeetings / leadsTouched) * 100) : null,
+        leadConversionRate: leadsTouched > 0 ? Math.round((convertedLeads / leadsTouched) * 100) : null,
       },
     };
 }
