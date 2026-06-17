@@ -265,55 +265,51 @@ async function buildDashboardData(owner) {
     );
     const activeClients = activeClientsResult.length ? (activeClientsResult[0].accts || 0) : 0;
 
-    // 5d. Avg days from lead created to first meeting on the converted account.
-    // Avoids SOQL aggregate functions (MIN/GROUP BY fail through Composio) — calculates in JS.
-    const convertedLeadRecords = await soql(
+    // ── KPI: Avg Days — Lead Created to First Meeting ────────────────────────
+    // Fully self-contained. Fetches converted leads + their account events, computes in JS.
+    const kpi_convertedLeadRecords = await soql(
       `SELECT Id, CreatedDate, ConvertedAccountId FROM Lead WHERE IsConverted = true AND ConvertedDate >= ${FISCAL_YEAR}-01-01 AND ConvertedDate <= ${today} LIMIT 2000`
     );
-    const convertedLeads = convertedLeadRecords.length;
-    const convertedAccountIds = convertedLeadRecords.map(l => l.ConvertedAccountId).filter(Boolean);
-    const convertedAccountIdsCsv = convertedAccountIds.length
-      ? convertedAccountIds.map(id => `'${id}'`).join(',')
+    const kpi_convertedAccountIds = kpi_convertedLeadRecords.map(l => l.ConvertedAccountId).filter(Boolean);
+    const kpi_convertedAccountIdsCsv = kpi_convertedAccountIds.length
+      ? kpi_convertedAccountIds.map(id => `'${id}'`).join(',')
       : "'NONE'";
-
-    // Fetch all events on converted accounts, find earliest per account in JS
-    const convertedAccountEvents = await soql(
-      `SELECT AccountId, ActivityDate FROM Event WHERE AccountId IN (${convertedAccountIdsCsv}) AND ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} LIMIT 2000`
+    const kpi_accountEvents = await soql(
+      `SELECT AccountId, ActivityDate FROM Event WHERE AccountId IN (${kpi_convertedAccountIdsCsv}) AND ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} LIMIT 2000`
     );
-    const firstMeetingByAccount = {};
-    convertedAccountEvents.forEach(e => {
-      if (!firstMeetingByAccount[e.AccountId] || e.ActivityDate < firstMeetingByAccount[e.AccountId]) {
-        firstMeetingByAccount[e.AccountId] = e.ActivityDate;
+    const kpi_firstMeetingByAccount = {};
+    kpi_accountEvents.forEach(e => {
+      if (!kpi_firstMeetingByAccount[e.AccountId] || e.ActivityDate < kpi_firstMeetingByAccount[e.AccountId]) {
+        kpi_firstMeetingByAccount[e.AccountId] = e.ActivityDate;
       }
     });
-
-    const leadCreatedByAccount = {};
-    convertedLeadRecords.forEach(l => {
-      if (l.ConvertedAccountId) leadCreatedByAccount[l.ConvertedAccountId] = l.CreatedDate;
+    const kpi_leadCreatedByAccount = {};
+    kpi_convertedLeadRecords.forEach(l => {
+      if (l.ConvertedAccountId) kpi_leadCreatedByAccount[l.ConvertedAccountId] = l.CreatedDate;
     });
-
-    const daysToMeetingArr = convertedAccountIds
-      .filter(id => firstMeetingByAccount[id] && leadCreatedByAccount[id])
-      .map(id => Math.round((new Date(firstMeetingByAccount[id]) - new Date(leadCreatedByAccount[id])) / 86400000))
+    const kpi_daysArr = kpi_convertedAccountIds
+      .filter(id => kpi_firstMeetingByAccount[id] && kpi_leadCreatedByAccount[id])
+      .map(id => Math.round((new Date(kpi_firstMeetingByAccount[id]) - new Date(kpi_leadCreatedByAccount[id])) / 86400000))
       .filter(d => d >= 0);
-
-    const avgDaysLeadToMeeting = daysToMeetingArr.length > 0
-      ? Math.round(daysToMeetingArr.reduce((a, b) => a + b, 0) / daysToMeetingArr.length)
+    const avgDaysLeadToMeeting = kpi_daysArr.length > 0
+      ? Math.round(kpi_daysArr.reduce((a, b) => a + b, 0) / kpi_daysArr.length)
       : null;
+    const avgDaysLeadToMeetingSampleSize = kpi_daysArr.length;
 
-    // 5e. Leads touched — unique leads with any task logged this FY.
-    // No ActivityDate filter: Task.ActivityDate is often null/unset by reps.
-    // Scope by fetching lead IDs first (no subquery on polymorphic WhoId).
-    const allLeadRecords = await soql(
+    // ── KPI: Lead Conversion Rate ─────────────────────────────────────────────
+    // Fully self-contained. Converted leads this FY / total leads created this FY.
+    // Uses only Lead data — no dependency on Task logging behavior.
+    const kpi_allLeads = await soql(
       `SELECT Id FROM Lead WHERE CreatedDate >= ${FISCAL_YEAR}-01-01 AND CreatedDate <= ${today} LIMIT 2000`
     );
-    const allLeadIdsCsv = allLeadRecords.length
-      ? allLeadRecords.map(l => `'${l.Id}'`).join(',')
-      : "'NONE'";
-    const leadTasksResult = await soql(
-      `SELECT WhoId FROM Task WHERE WhoId IN (${allLeadIdsCsv}) LIMIT 2000`
+    const kpi_convertedLeads = await soql(
+      `SELECT Id FROM Lead WHERE IsConverted = true AND ConvertedDate >= ${FISCAL_YEAR}-01-01 AND ConvertedDate <= ${today} LIMIT 2000`
     );
-    const leadsTouched = new Set(leadTasksResult.map(t => t.WhoId)).size;
+    const totalLeads = kpi_allLeads.length;
+    const convertedLeads = kpi_convertedLeads.length;
+    const leadConversionRate = totalLeads > 0
+      ? Math.round((convertedLeads / totalLeads) * 100)
+      : null;
 
     // ── Pipeline by stage ──
     const stageTotals = {};
@@ -393,9 +389,10 @@ async function buildDashboardData(owner) {
         closedWonCount: closedWon.length,
         activeClients,
         avgDaysLeadToMeeting,
+        avgDaysLeadToMeetingSampleSize,
+        totalLeads,
         convertedLeads,
-        leadsTouched,
-        leadConversionRate: leadsTouched > 0 ? Math.round((convertedLeads / leadsTouched) * 100) : null,
+        leadConversionRate,
       },
     };
 }
