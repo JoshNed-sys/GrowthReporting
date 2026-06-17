@@ -446,11 +446,11 @@ async function loadDashboard(owner) {
 
   if (D.summary.avgDaysLeadToMeeting !== null && D.summary.avgDaysLeadToMeeting !== undefined) {
     document.getElementById('kpi-days-to-meeting').textContent = D.summary.avgDaysLeadToMeeting + 'd';
-    document.getElementById('kpi-days-to-meeting-sub').textContent = 'across ' + (D.summary.convertedLeads || 0) + ' converted leads this FY';
+    document.getElementById('kpi-days-to-meeting-sub').textContent = 'across ' + (D.summary.avgDaysLeadToMeetingSampleSize || 0) + ' converted leads this FY';
   }
   if (D.summary.leadConversionRate !== null && D.summary.leadConversionRate !== undefined) {
     document.getElementById('kpi-lead-conv-rate').textContent = D.summary.leadConversionRate + '%';
-    document.getElementById('kpi-lead-conv-rate-sub').textContent = (D.summary.convertedLeads || 0) + ' converted / ' + (D.summary.leadsTouched || 0) + ' touched';
+    document.getElementById('kpi-lead-conv-rate-sub').textContent = (D.summary.convertedLeads || 0) + ' converted of ' + (D.summary.totalLeads || 0) + ' leads';
   }
 
   // MTD: last entry in pipelineGrowth
