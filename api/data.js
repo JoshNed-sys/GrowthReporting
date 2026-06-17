@@ -302,7 +302,10 @@ async function buildDashboardData(owner) {
     const kpi_leadsTouchedResult = await soql(
       `SELECT COUNT_DISTINCT(WhoId) cnt FROM Task WHERE WhoId IN (SELECT Id FROM Lead) AND ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today}`
     );
-    const leadsTouched = kpi_leadsTouchedResult.length ? (kpi_leadsTouchedResult[0].cnt || 0) : 0;
+    // Composio may return aggregate alias as 'cnt' or fall back to 'expr0'
+    const leadsTouched = kpi_leadsTouchedResult.length
+      ? Number(kpi_leadsTouchedResult[0].cnt || kpi_leadsTouchedResult[0].expr0 || 0)
+      : 0;
 
     const kpi_convertedLeadsResult = await soql(
       `SELECT Id FROM Lead WHERE IsConverted = true LIMIT 2000`
