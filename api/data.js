@@ -265,31 +265,40 @@ async function buildDashboardData(owner) {
     );
     const activeClients = activeClientsResult.length ? (activeClientsResult[0].accts || 0) : 0;
 
-    // 5d. Avg touches to meeting — tasks on the Contact created from lead conversion.
-    // When a lead converts, Salesforce re-parents its tasks to the new Contact (WhoId = ContactId).
-    // So we fetch ConvertedContactId from converted leads and count tasks on those contacts.
+    // 5d. Avg days from lead created to first meeting on the converted account.
+    // Uses ConvertedAccountId to find the account, then looks up the earliest Event on it.
     const convertedLeadRecords = await soql(
-      `SELECT Id, ConvertedContactId FROM Lead WHERE IsConverted = true AND ConvertedDate >= ${FISCAL_YEAR}-01-01 AND ConvertedDate <= ${today} LIMIT 2000`
+      `SELECT Id, CreatedDate, ConvertedAccountId FROM Lead WHERE IsConverted = true AND ConvertedDate >= ${FISCAL_YEAR}-01-01 AND ConvertedDate <= ${today} LIMIT 2000`
     );
     const convertedLeads = convertedLeadRecords.length;
-    const convertedContactIds = convertedLeadRecords
-      .map(l => l.ConvertedContactId)
-      .filter(Boolean);
-    const convertedContactIdsCsv = convertedContactIds.length
-      ? convertedContactIds.map(id => `'${id}'`).join(',')
+    const convertedAccountIds = convertedLeadRecords.map(l => l.ConvertedAccountId).filter(Boolean);
+    const convertedAccountIdsCsv = convertedAccountIds.length
+      ? convertedAccountIds.map(id => `'${id}'`).join(',')
       : "'NONE'";
 
-    const tasksOnContactsResult = await soql(
-      `SELECT COUNT(Id) cnt FROM Task WHERE WhoId IN (${convertedContactIdsCsv})`
+    // First meeting date per converted account
+    const firstMeetingsResult = await soql(
+      `SELECT AccountId, MIN(ActivityDate) firstMeeting FROM Event WHERE AccountId IN (${convertedAccountIdsCsv}) AND ActivityDate >= ${FISCAL_YEAR}-01-01 GROUP BY AccountId`
     );
-    const tasksOnLeads = tasksOnContactsResult.length ? (tasksOnContactsResult[0].cnt || 0) : 0;
-    const avgTouchesToMeeting = convertedLeads > 0
-      ? Math.round((tasksOnLeads / convertedLeads) * 10) / 10
+    const firstMeetingByAccount = {};
+    firstMeetingsResult.forEach(r => { firstMeetingByAccount[r.AccountId] = r.firstMeeting; });
+
+    const leadCreatedByAccount = {};
+    convertedLeadRecords.forEach(l => {
+      if (l.ConvertedAccountId) leadCreatedByAccount[l.ConvertedAccountId] = l.CreatedDate;
+    });
+
+    const daysToMeetingArr = convertedAccountIds
+      .filter(id => firstMeetingByAccount[id] && leadCreatedByAccount[id])
+      .map(id => Math.round((new Date(firstMeetingByAccount[id]) - new Date(leadCreatedByAccount[id])) / 86400000))
+      .filter(d => d >= 0);
+
+    const avgDaysLeadToMeeting = daysToMeetingArr.length > 0
+      ? Math.round(daysToMeetingArr.reduce((a, b) => a + b, 0) / daysToMeetingArr.length)
       : null;
 
     // 5e. Outreach-to-meeting rate — meetings booked / unique leads touched (%)
-    // Salesforce rejects mixed Lead+Contact IDs in a polymorphic WhoId IN clause.
-    // Use Lead IDs only here (tasks logged before conversion) — this was working correctly.
+    // WhoId on Tasks is polymorphic; pass Lead IDs explicitly (no subquery).
     const allLeadRecords = await soql(
       `SELECT Id FROM Lead WHERE CreatedDate >= ${FISCAL_YEAR}-01-01 AND CreatedDate <= ${today} LIMIT 2000`
     );
@@ -378,7 +387,7 @@ async function buildDashboardData(owner) {
         closedWonValue,
         closedWonCount: closedWon.length,
         activeClients,
-        avgTouchesToMeeting,
+        avgDaysLeadToMeeting,
         convertedLeads,
         leadsTouched,
         outreachToMeetingRate: leadsTouched > 0 ? Math.round((ytdMeetings / leadsTouched) * 100) : null,
