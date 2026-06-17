@@ -265,6 +265,26 @@ async function buildDashboardData(owner) {
     );
     const activeClients = activeClientsResult.length ? (activeClientsResult[0].accts || 0) : 0;
 
+    // 5d. Avg touches to meeting — total tasks on converted leads / converted leads this FY
+    const convertedLeadsResult = await soql(
+      `SELECT COUNT(Id) cnt FROM Lead WHERE IsConverted = true AND ConvertedDate >= ${FISCAL_YEAR}-01-01 AND ConvertedDate <= ${today}`
+    );
+    const convertedLeads = convertedLeadsResult.length ? (convertedLeadsResult[0].cnt || 0) : 0;
+
+    const tasksOnLeadsResult = await soql(
+      `SELECT COUNT(Id) cnt FROM Task WHERE WhoId IN (SELECT Id FROM Lead WHERE IsConverted = true AND ConvertedDate >= ${FISCAL_YEAR}-01-01 AND ConvertedDate <= ${today})`
+    );
+    const tasksOnLeads = tasksOnLeadsResult.length ? (tasksOnLeadsResult[0].cnt || 0) : 0;
+    const avgTouchesToMeeting = convertedLeads > 0
+      ? Math.round((tasksOnLeads / convertedLeads) * 10) / 10
+      : null;
+
+    // 5e. Outreach-to-meeting rate — meetings booked / unique leads touched (%)
+    const leadsTouchedResult = await soql(
+      `SELECT COUNT_DISTINCT(WhoId) cnt FROM Task WHERE WhoId IN (SELECT Id FROM Lead) AND ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today}`
+    );
+    const leadsTouched = leadsTouchedResult.length ? (leadsTouchedResult[0].cnt || 0) : 0;
+
     // ── Pipeline by stage ──
     const stageTotals = {};
     PIPELINE_STAGES.forEach(s => stageTotals[s] = { value: 0, count: 0 });
@@ -342,6 +362,10 @@ async function buildDashboardData(owner) {
         closedWonValue,
         closedWonCount: closedWon.length,
         activeClients,
+        avgTouchesToMeeting,
+        convertedLeads,
+        leadsTouched,
+        outreachToMeetingRate: leadsTouched > 0 ? Math.round((ytdMeetings / leadsTouched) * 100) : null,
       },
     };
 }
