@@ -125,15 +125,15 @@ canvas { max-height: 280px; }
       <div class="value" id="kpi-meetings">—</div>
       <div class="sub" id="kpi-avg"></div>
     </div>
-    <div class="kpi pending">
-      <div class="label">Lead-to-Account Conversion</div>
-      <div class="value">—</div>
-      <div class="sub">Coming soon</div>
+    <div class="kpi">
+      <div class="label">Avg Touches to Meeting</div>
+      <div class="value" id="kpi-avg-touches">—</div>
+      <div class="sub" id="kpi-avg-touches-sub">touches per converted lead</div>
     </div>
-    <div class="kpi pending">
-      <div class="label">Account-to-Opportunity Rate</div>
-      <div class="value">—</div>
-      <div class="sub">Coming soon</div>
+    <div class="kpi">
+      <div class="label">Outreach-to-Meeting Rate</div>
+      <div class="value" id="kpi-outreach-rate">—</div>
+      <div class="sub" id="kpi-outreach-rate-sub">leads touched this FY</div>
     </div>
     <div class="kpi">
       <div class="label">Win Rate</div>
@@ -443,6 +443,15 @@ async function loadDashboard(owner) {
   // Efficiency KPIs
   document.getElementById('kpi-meetings').textContent = D.summary.ytdMeetings;
   document.getElementById('kpi-avg').textContent = 'Avg ' + D.summary.avgMonthlyMeetings + '/mo';
+
+  if (D.summary.avgTouchesToMeeting !== null && D.summary.avgTouchesToMeeting !== undefined) {
+    document.getElementById('kpi-avg-touches').textContent = D.summary.avgTouchesToMeeting;
+    document.getElementById('kpi-avg-touches-sub').textContent = 'from ' + (D.summary.convertedLeads || 0) + ' converted leads this FY';
+  }
+  if (D.summary.outreachToMeetingRate !== null && D.summary.outreachToMeetingRate !== undefined) {
+    document.getElementById('kpi-outreach-rate').textContent = D.summary.outreachToMeetingRate + '%';
+    document.getElementById('kpi-outreach-rate-sub').textContent = (D.summary.leadsTouched || 0) + ' leads touched this FY';
+  }
 
   // MTD: last entry in pipelineGrowth
   const growth = D.pipelineGrowth || [];
