@@ -231,7 +231,7 @@ async function buildDashboardData(owner) {
     );
     const totalOppsThisYear = allOppsThisYear.length ? (allOppsThisYear[0].cnt || 0) : 0;
     // 5c. Active clients — hardcoded (update manually)
-    const activeClients = 21;
+    const activeClients = 23;
     // ── KPI: Avg Days — Lead Created to First Meeting ────────────────────────
     // Fully self-contained. Fetches converted leads + their account events, computes in JS.
     const kpi_convertedLeadRecords = await soql(
