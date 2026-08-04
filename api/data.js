@@ -1,10 +1,8 @@
 // api/data.js — Vercel serverless function
 // Queries Salesforce via Composio and returns dashboard JSON
 const https = require('https');
-
 const PIPELINE_STAGES = ['Qualify', 'Explore', 'Propose', 'Negotiate', 'Nurture'];
 const FISCAL_YEAR = new Date().getFullYear();
-
 // ── Revenue config (update manually each month until Stripe is connected) ────
 // Last updated: 2026-06-01
 const REVENUE = {
@@ -34,7 +32,6 @@ const REVENUE = {
     { month: 'July 2026', newMRR: 3230 },
   ],
 };
-
 // ── Composio SOQL helper ─────────────────────────────────────────────────────
 async function soql(query) {
   const body = JSON.stringify({
@@ -70,12 +67,10 @@ async function soql(query) {
     req.end();
   });
 }
-
 // ── QuickBooks auth + revenue ─────────────────────────────────────────────────
 const MONTHLY_REVENUE_GOAL = 83000;
 const ANNUAL_REVENUE_GOAL = 750000;
 const QB_BASE = 'sandbox-quickbooks.api.intuit.com';
-
 async function qbRequest(path, accessToken, realmId) {
   return new Promise((resolve, reject) => {
     const req = https.request({
@@ -101,7 +96,6 @@ async function qbRequest(path, accessToken, realmId) {
     req.end();
   });
 }
-
 async function qbRefreshToken() {
   const body = new URLSearchParams({
     grant_type: 'refresh_token',
@@ -138,13 +132,11 @@ async function qbRefreshToken() {
     req.end();
   });
 }
-
 async function getQBRevenue(fiscalYear) {
   try {
     const accessToken = await qbRefreshToken();
     const realmId = process.env.QB_REALM_ID;
     if (!realmId) throw new Error('QB_REALM_ID not set');
-
     const startDate = `${fiscalYear}-01-01`;
     const endDate = new Date().toISOString().slice(0, 10);
     const report = await qbRequest(
@@ -152,11 +144,9 @@ async function getQBRevenue(fiscalYear) {
       accessToken,
       realmId
     );
-
     // Parse columns (skip label column, get month columns)
     const cols = report?.Columns?.Column || [];
     const monthCols = cols.slice(1).filter(c => c.ColTitle && c.ColTitle !== 'TOTAL');
-
     // Find Income/Total Income row
     const rows = report?.Rows?.Row || [];
     let incomeRow = null;
@@ -167,15 +157,12 @@ async function getQBRevenue(fiscalYear) {
       }
     }
     if (!incomeRow) return null;
-
     const monthlyRevenue = monthCols.map((col, i) => ({
       month: col.ColTitle,
       revenue: parseFloat(incomeRow[i + 1]?.value || '0') || 0,
     })).filter(m => m.revenue > 0);
-
     const ytdRevenue = monthlyRevenue.reduce((a, m) => a + m.revenue, 0);
     const currentMonthRevenue = monthlyRevenue.length ? monthlyRevenue[monthlyRevenue.length - 1].revenue : 0;
-
     return {
       monthlyRevenue,
       ytdRevenue,
@@ -191,39 +178,32 @@ async function getQBRevenue(fiscalYear) {
     return null;
   }
 }
-
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function monthLabel(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
-
 function monthSortKey(label) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const [mon, yr] = label.split(' ');
   return parseInt(yr) * 100 + months.indexOf(mon);
 }
-
 // ── Data builder (shared by /api/data and /api/overview) ─────────────────────
 async function buildDashboardData(owner) {
     const stagesCsv = PIPELINE_STAGES.map(s => `'${s}'`).join(',');
     const today = new Date().toISOString().slice(0, 10);
     const currentMonth = today.slice(0, 7);
-
     // Owner filter (optional)
     const ownerFilter = owner ? ` AND Owner.Name = '${owner}'` : '';
     const eventOwnerFilter = owner ? ` AND Owner.Name = '${owner}'` : '';
-
     // 1. Open pipeline opps
     const opps = await soql(
       `SELECT Id, StageName, Amount, CreatedDate, AccountId FROM Opportunity WHERE StageName IN (${stagesCsv}) AND AccountId != null${ownerFilter} LIMIT 2000`
     );
-
    // 3. Events this FY on Pre Sale accounts
     const events = await soql(
       `SELECT Id, ActivityDate, AccountId FROM Event WHERE ActivityDate >= ${FISCAL_YEAR}-01-01 AND ActivityDate <= ${today} AND Account.RecordType.Name = 'Pre Sale'${eventOwnerFilter} LIMIT 2000`
     );
-
     // 4. Revenue from config (swap for Stripe later)
     const currentMonthRevenue = REVENUE.monthly.length ? REVENUE.monthly[REVENUE.monthly.length - 1].revenue : 0;
     const ytdRevenue = 214033.71; // Hardcoded YTD gross revenue — update manually each month
@@ -238,7 +218,6 @@ async function buildDashboardData(owner) {
       // True ARR if provided, else annualize current MRR
       arr: REVENUE.currentARR != null ? REVENUE.currentARR : currentMonthRevenue * 12,
     });
-
     // 5. Closed opps this FY — use IsClosed/IsWon flags, not StageName.
     // Won deals live under multiple stage names (e.g. 'Active', 'Closed Won',
     // 'Demo Platform Configuration'), so IsWon is the reliable signal.
@@ -246,19 +225,13 @@ async function buildDashboardData(owner) {
     const closedOpps = await soql(
       `SELECT Id, StageName, IsWon, Amount, CloseDate FROM Opportunity WHERE IsClosed = true AND CloseDate >= ${FISCAL_YEAR}-01-01 AND CloseDate <= ${today}${ownerFilter} LIMIT 2000`
     );
-
     // 5b. Total opportunities this FY — win-rate denominator (all opps, not just closed)
     const allOppsThisYear = await soql(
       `SELECT COUNT(Id) cnt FROM Opportunity WHERE CloseDate >= ${FISCAL_YEAR}-01-01 AND CloseDate <= ${FISCAL_YEAR}-12-31${ownerFilter}`
     );
     const totalOppsThisYear = allOppsThisYear.length ? (allOppsThisYear[0].cnt || 0) : 0;
-
-    // 5c. Active clients — distinct accounts with a won (active) opportunity
-    const activeClientsResult = await soql(
-      `SELECT COUNT_DISTINCT(AccountId) accts FROM Opportunity WHERE IsWon = true AND AccountId != null${ownerFilter}`
-    );
-    const activeClients = activeClientsResult.length ? (activeClientsResult[0].accts || 0) : 0;
-
+    // 5c. Active clients — hardcoded (update manually)
+    const activeClients = 21;
     // ── KPI: Avg Days — Lead Created to First Meeting ────────────────────────
     // Fully self-contained. Fetches converted leads + their account events, computes in JS.
     const kpi_convertedLeadRecords = await soql(
@@ -289,7 +262,6 @@ async function buildDashboardData(owner) {
       ? Math.round(kpi_daysArr.reduce((a, b) => a + b, 0) / kpi_daysArr.length)
       : null;
     const avgDaysLeadToMeetingSampleSize = kpi_daysArr.length;
-
     // ── KPI: Lead Conversion Rate ─────────────────────────────────────────────
     // COUNT_DISTINCT with subquery on WhoId is the only form that works through Composio.
     // Non-aggregate SELECT WhoId with same filter returns [] — aggregate form returns correctly.
@@ -300,7 +272,6 @@ async function buildDashboardData(owner) {
     const leadsTouched = kpi_leadsTouchedResult.length
       ? Number(kpi_leadsTouchedResult[0].cnt || kpi_leadsTouchedResult[0].expr0 || 0)
       : 0;
-
     const kpi_convertedLeadsResult = await soql(
       `SELECT Id FROM Lead WHERE IsConverted = true LIMIT 2000`
     );
@@ -308,7 +279,6 @@ async function buildDashboardData(owner) {
     const leadConversionRate = leadsTouched > 0
       ? Math.round((convertedLeads / leadsTouched) * 100)
       : null;
-
     // ── Pipeline by stage ──
     const stageTotals = {};
     PIPELINE_STAGES.forEach(s => stageTotals[s] = { value: 0, count: 0 });
@@ -324,7 +294,6 @@ async function buildDashboardData(owner) {
       .map(s => ({ stage: s, value: stageTotals[s].value, count: stageTotals[s].count }));
     const totalPipelineValue = pipelineByStage.reduce((a, s) => a + s.value, 0);
     const totalOpenOpps = pipelineByStage.reduce((a, s) => a + s.count, 0);
-
     // ── Pipeline growth (new opps this FY by month, excl. Feb) ──
     const monthlyNew = {};
     opps.forEach(o => {
@@ -339,7 +308,6 @@ async function buildDashboardData(owner) {
     const pipelineGrowth = Object.keys(monthlyNew)
       .sort((a, b) => monthSortKey(a) - monthSortKey(b))
       .map(m => ({ month: m, count: monthlyNew[m].count, value: monthlyNew[m].value }));
-
     // ── Meetings per month ──
     const meetingsByMonth = {};
     events.forEach(e => {
@@ -356,10 +324,8 @@ async function buildDashboardData(owner) {
     const avgMonthlyMeetings = meetingsPerMonth.length
       ? Math.round((ytdMeetings / meetingsPerMonth.length) * 10) / 10
       : 0;
-
     // ── QuickBooks revenue (await the parallel promise) ──
     const qbRevenue = await qbRevenuePromise;
-
     // ── Win rate ──
     const closedWon = closedOpps.filter(o => o.IsWon === true);
     // Win rate = won deals / all opportunities this year
@@ -368,7 +334,6 @@ async function buildDashboardData(owner) {
       : null;
     // Opportunity Amount is annual contract value — divide by 12 for monthly revenue
     const closedWonValue = closedWon.reduce((a, o) => a + (o.Amount || 0), 0) / 12;
-
     return {
       generated: today,
       fiscalYear: FISCAL_YEAR,
@@ -394,7 +359,6 @@ async function buildDashboardData(owner) {
       },
     };
 }
-
 // ── HTTP handler ─────────────────────────────────────────────────────────────
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -408,6 +372,5 @@ module.exports = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
 // Export for reuse by /api/overview
 module.exports.buildDashboardData = buildDashboardData;
