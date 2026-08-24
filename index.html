@@ -85,7 +85,7 @@ canvas { max-height: 280px; }
     </div>
     <div class="card">
       <h2>Monthly Gross Revenue</h2>
-      <canvas id="monthlyGrossRevenueChart" style="max-height:160px;"></canvas>
+      <canvas id="monthlyGrossRevenueChart" style="max-height:180px;"></canvas>
     </div>
   </div>
   <div class="section-label">Pipeline</div>
@@ -181,16 +181,21 @@ let chartInstances = [];
 const PREV_QUARTER_ARR = 429600;
 // Closed Won net new MRR added in previous quarter — for QoQ comparison
 const PREV_QUARTER_CLOSED_WON = 4260;
-// Monthly Gross Revenue — Jan–Aug
+// Monthly Gross Revenue — Jan–Aug, broken out by revenue type
 const MONTHLY_GROSS_REVENUE = [
-  { month: 'Jan', value: 24750 },
-  { month: 'Feb', value: 25250 },
-  { month: 'Mar', value: 25250 },
-  { month: 'Apr', value: 26670 },
-  { month: 'May', value: 25880 },
-  { month: 'Jun', value: 48355 },
-  { month: 'Jul', value: 39868.71 },
-  { month: 'Aug', value: 47720 },
+  { month: 'Jan', MRR: 24750 },
+  { month: 'Feb', MRR: 25250 },
+  { month: 'Mar', MRR: 25250 },
+  { month: 'Apr', MRR: 26670 },
+  { month: 'May', MRR: 25880 },
+  { month: 'Jun', Onboarding: 20000, MRR: 29868.71 },
+  { month: 'Jul', Onboarding: 10000, MRR: 29868.71 },
+  { month: 'Aug', Migration: 15000, MRR: 32720 },
+];
+const MONTHLY_GROSS_REVENUE_SERIES = [
+  { key: 'MRR', color: '#6366f1' },
+  { key: 'Onboarding', color: '#22d3ee' },
+  { key: 'Migration', color: '#f59e0b' },
 ];
 // ── Tab switching ──
 document.querySelectorAll('.tab[data-tab]').forEach(tab => {
@@ -421,26 +426,40 @@ async function loadDashboard(owner) {
       }
     }));
   }
-  // Monthly Gross Revenue chart
+  // Monthly Gross Revenue chart — stacked by revenue type (MRR / Onboarding / Migration)
   if (MONTHLY_GROSS_REVENUE.length) {
+    const grDatasets = MONTHLY_GROSS_REVENUE_SERIES
+      .map(s => ({
+        label: s.key,
+        data: MONTHLY_GROSS_REVENUE.map(m => m[s.key] || 0),
+        backgroundColor: s.color,
+        borderRadius: 4,
+      }))
+      // Drop a series entirely if no month uses it, so the legend only shows what's present
+      .filter(ds => ds.data.some(v => v > 0));
     chartInstances.push(new Chart(document.getElementById('monthlyGrossRevenueChart'), {
       type: 'bar',
       data: {
         labels: MONTHLY_GROSS_REVENUE.map(m => m.month),
-        datasets: [{
-          data: MONTHLY_GROSS_REVENUE.map(m => m.value),
-          backgroundColor: '#6366f1',
-          borderRadius: 4,
-        }]
+        datasets: grDatasets
       },
       options: {
-        layout: { padding: { top: 24 } },
-        plugins: { legend: { display: false }, tooltip: {
-          callbacks: { label: ctx => '$' + ctx.parsed.y.toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' gross revenue' }
-        }},
+        layout: { padding: { top: 16 } },
+        plugins: {
+          legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toLocaleString(undefined, { maximumFractionDigits: 2 }),
+              footer: items => {
+                const total = items.reduce((sum, i) => sum + i.parsed.y, 0);
+                return 'Total: $' + total.toLocaleString(undefined, { maximumFractionDigits: 2 });
+              }
+            }
+          }
+        },
         scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 12 } } },
-          y: { beginAtZero: true, ticks: { callback: v => '$' + (v/1e3).toFixed(0)+'K' }, grid: { color: '#f0f0f0' } }
+          x: { stacked: true, grid: { display: false }, ticks: { font: { size: 12 } } },
+          y: { stacked: true, beginAtZero: true, ticks: { callback: v => '$' + (v/1e3).toFixed(0)+'K' }, grid: { color: '#f0f0f0' } }
         }
       }
     }));
