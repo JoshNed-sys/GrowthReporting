@@ -31,7 +31,6 @@ canvas { max-height: 280px; }
 .kpi.pending .value { color: #ccc; }
 .kpi.pending .sub { color: #ddd; }
 .section-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #aaa; padding: 28px 32px 0; }
-
 /* Tabs */
 .tabs { display: flex; gap: 4px; padding: 0 32px; background: #1a1a2e; }
 .tab { padding: 14px 22px; font-size: .85rem; font-weight: 600; color: rgba(255,255,255,.55); cursor: pointer; border: none; background: transparent; border-bottom: 3px solid transparent; transition: all .15s; }
@@ -46,15 +45,12 @@ canvas { max-height: 280px; }
   <h1>Sales Dashboard</h1>
   <span id="generated-date"></span>
 </header>
-
 <nav class="tabs">
   <button class="tab active" data-tab="dashboard">Dashboard</button>
   <button class="tab" data-tab="actions">Action Center</button>
 </nav>
-
 <!-- ── Dashboard (all data in one view) ────────────────── -->
 <section class="tab-panel active" id="tab-dashboard">
-
   <div class="section-label">Revenue</div>
   <div class="kpi-row4" id="revenue-section" style="display:none">
     <div class="kpi">
@@ -79,7 +75,7 @@ canvas { max-height: 280px; }
       <div class="sub" id="kpi-acv-sub">ARR per active client</div>
     </div>
   </div>
-  <div class="charts" id="revenue-chart-section" style="display:none; grid-template-columns: 1fr;">
+  <div class="charts" id="revenue-chart-section" style="display:none; grid-template-columns: 1fr 1fr;">
     <div class="card">
       <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
         <h2 style="margin:0;">Net New MRR Added (Monthly)</h2>
@@ -87,8 +83,11 @@ canvas { max-height: 280px; }
       </div>
       <canvas id="newMRRChart" style="max-height:160px;"></canvas>
     </div>
+    <div class="card">
+      <h2>Monthly Gross Revenue</h2>
+      <canvas id="monthlyGrossRevenueChart" style="max-height:160px;"></canvas>
+    </div>
   </div>
-
   <div class="section-label">Pipeline</div>
   <div class="kpis">
     <div class="kpi">
@@ -117,7 +116,6 @@ canvas { max-height: 280px; }
       <canvas id="growthChart"></canvas>
     </div>
   </div>
-
   <div class="section-label">Efficiency</div>
   <div class="kpi-row4">
     <div class="kpi">
@@ -147,10 +145,8 @@ canvas { max-height: 280px; }
       <canvas id="meetingsChart"></canvas>
     </div>
   </div>
-
   <div style="height:32px;"></div>
 </section>
-
 <!-- ── Action Center (AI summary + chat) ───────────────── -->
 <section class="tab-panel" id="tab-actions">
   <div style="padding: 24px 32px;">
@@ -162,7 +158,6 @@ canvas { max-height: 280px; }
       <div id="overview-content" style="font-size:.95rem; line-height:1.65; color:#333;">Open this tab to generate a summary…</div>
       <div id="overview-meta" style="font-size:.75rem; color:#aaa; margin-top:14px;"></div>
     </div>
-
     <div class="card" style="margin-top:16px;">
       <div style="display:flex; align-items:center; justify-content:space-between;">
         <h2 style="margin:0 0 4px;">Ask about your data</h2>
@@ -179,16 +174,24 @@ canvas { max-height: 280px; }
     </div>
   </div>
 </section>
-
 <script>
 let currentOwner = '';
 let chartInstances = [];
-
 // ARR at end of previous quarter — for QoQ comparison
 const PREV_QUARTER_ARR = 429600;
 // Closed Won net new MRR added in previous quarter — for QoQ comparison
 const PREV_QUARTER_CLOSED_WON = 4260;
-
+// Monthly Gross Revenue — Jan–Aug
+const MONTHLY_GROSS_REVENUE = [
+  { month: 'Jan', value: 24750 },
+  { month: 'Feb', value: 25250 },
+  { month: 'Mar', value: 25250 },
+  { month: 'Apr', value: 26670 },
+  { month: 'May', value: 25880 },
+  { month: 'Jun', value: 48355 },
+  { month: 'Jul', value: 39868.71 },
+  { month: 'Aug', value: 47720 },
+];
 // ── Tab switching ──
 document.querySelectorAll('.tab[data-tab]').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -202,7 +205,6 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab => {
     if (tab.dataset.tab === 'actions') loadOverview();
   });
 });
-
 // ── Minimal markdown → HTML for the summary ──
 function renderMarkdown(md) {
   const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -251,7 +253,6 @@ function renderMarkdown(md) {
   closeList();
   return html;
 }
-
 // ── AI overview (lazy-loaded, paid LLM call) ──
 let overviewLoaded = false;
 async function loadOverview(force) {
@@ -274,7 +275,6 @@ async function loadOverview(force) {
   }
 }
 document.getElementById('overview-refresh').addEventListener('click', () => loadOverview(true));
-
 // ── Chat with the data ──
 const chatHistory = [];
 function addChatBubble(role, html) {
@@ -320,12 +320,10 @@ document.getElementById('chat-clear').addEventListener('click', () => {
   document.getElementById('chat-log').innerHTML = '';
   document.getElementById('chat-input').focus();
 });
-
 async function loadDashboard(owner) {
   // Destroy existing charts
   chartInstances.forEach(c => c.destroy());
   chartInstances = [];
-
   let D;
   try {
     const url = owner ? `/api/data?owner=${encodeURIComponent(owner)}` : '/api/data';
@@ -337,13 +335,10 @@ async function loadDashboard(owner) {
     document.body.innerHTML = '<p style="padding:2rem;color:red">Failed to load data: ' + e.message + '</p>';
     return;
   }
-
   // Header date
   document.getElementById('generated-date').textContent = 'Updated ' + D.generated;
-
   // KPIs
   const fmt = v => '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(0)+'K');
-
   // Revenue KPIs
   if (D.revenue) {
     document.getElementById('revenue-section').style.display = 'grid';
@@ -353,7 +348,6 @@ async function loadDashboard(owner) {
     document.getElementById('kpi-monthly-goal').textContent = `${r.monthlyPct}% of ${fmt(r.monthlyGoal)} goal`;
     document.getElementById('monthly-bar').style.width = Math.min(r.monthlyPct, 100) + '%';
     document.getElementById('kpi-annual-rev').textContent = fmt(r.ytdRevenue);
-
     // ARR vs MRR annualized
     const mrrAnnualized = r.currentMonthRevenue * 12;
     const arr = (r.arr !== undefined && r.arr !== null) ? r.arr : mrrAnnualized;
@@ -365,23 +359,19 @@ async function loadDashboard(owner) {
       arrSub.textContent = `${qoqPct >= 0 ? '+' : ''}${qoqPct}% QoQ`;
       arrSub.className = 'sub ' + (qoqPct >= 0 ? 'up' : 'down');
     }
-
     // Average customer value = ARR / active clients
     const activeClients = D.summary.activeClients || 0;
     const acv = activeClients > 0 ? arr / activeClients : 0;
     document.getElementById('kpi-acv').textContent = acv > 0 ? fmt(acv) : '—';
     document.getElementById('kpi-acv-sub').textContent = activeClients + ' active clients';
   }
-
   // Pipeline KPIs
   document.getElementById('kpi-pipeline').textContent = fmt(D.summary.totalOpenPipelineValue);
   document.getElementById('kpi-opps').textContent = D.summary.totalOpenOpportunities + ' open opportunities';
-
   // Pipeline coverage (open pipeline / quota — quota TBD)
   const QUOTA = 750000;
   const coverage = (D.summary.totalOpenPipelineValue / QUOTA).toFixed(1);
   document.getElementById('kpi-coverage').textContent = coverage + 'x';
-
   // Closed won + avg deal size
   // Net New MRR chart — aggregated by quarter
   const newMRRData = D.monthlyNewMRR || [];
@@ -400,7 +390,6 @@ async function loadDashboard(owner) {
     });
     const qLabels = Object.keys(qTotals);
     const qValues = qLabels.map(q => qTotals[q]);
-
     const closedWonQ2 = 6600;
     const cwQoqPct = PREV_QUARTER_CLOSED_WON > 0
       ? Math.round((closedWonQ2 - PREV_QUARTER_CLOSED_WON) / PREV_QUARTER_CLOSED_WON * 100)
@@ -410,7 +399,6 @@ async function loadDashboard(owner) {
       qoqEl.textContent = `${cwQoqPct >= 0 ? '+' : ''}${cwQoqPct}% QoQ`;
       qoqEl.style.color = cwQoqPct >= 0 ? '#16a34a' : '#dc2626';
     }
-
     chartInstances.push(new Chart(document.getElementById('newMRRChart'), {
       type: 'bar',
       data: {
@@ -433,17 +421,38 @@ async function loadDashboard(owner) {
       }
     }));
   }
-
+  // Monthly Gross Revenue chart
+  if (MONTHLY_GROSS_REVENUE.length) {
+    chartInstances.push(new Chart(document.getElementById('monthlyGrossRevenueChart'), {
+      type: 'bar',
+      data: {
+        labels: MONTHLY_GROSS_REVENUE.map(m => m.month),
+        datasets: [{
+          data: MONTHLY_GROSS_REVENUE.map(m => m.value),
+          backgroundColor: '#6366f1',
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        layout: { padding: { top: 24 } },
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { label: ctx => '$' + ctx.parsed.y.toLocaleString(undefined, { maximumFractionDigits: 2 }) + ' gross revenue' }
+        }},
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 12 } } },
+          y: { beginAtZero: true, ticks: { callback: v => '$' + (v/1e3).toFixed(0)+'K' }, grid: { color: '#f0f0f0' } }
+        }
+      }
+    }));
+  }
   // Win rate
   if (D.summary.winRate !== null && D.summary.winRate !== undefined) {
     document.getElementById('kpi-win-rate').textContent = D.summary.winRate + '%';
     document.getElementById('kpi-win-rate-sub').textContent = (D.summary.closedWonCount || 0) + ' won this FY';
   }
-
   // Efficiency KPIs
   document.getElementById('kpi-meetings').textContent = D.summary.ytdMeetings;
   document.getElementById('kpi-avg').textContent = 'Avg ' + D.summary.avgMonthlyMeetings + '/mo';
-
   if (D.summary.avgDaysLeadToMeeting !== null && D.summary.avgDaysLeadToMeeting !== undefined) {
     document.getElementById('kpi-days-to-meeting').textContent = D.summary.avgDaysLeadToMeeting + 'd';
     document.getElementById('kpi-days-to-meeting-sub').textContent = 'across ' + (D.summary.avgDaysLeadToMeetingSampleSize || 0) + ' converted leads this FY';
@@ -456,7 +465,6 @@ async function loadDashboard(owner) {
       : (D.summary.convertedLeads || 0) + ' converted leads';
     document.getElementById('kpi-lead-conv-rate-sub').textContent = subText;
   }
-
   // MTD: last entry in pipelineGrowth
   const growth = D.pipelineGrowth || [];
   if (growth.length > 0) {
@@ -467,7 +475,6 @@ async function loadDashboard(owner) {
     document.getElementById('kpi-mtd').textContent = fmt(mtd.value);
     document.getElementById('kpi-mtd-count').textContent = mtd.count + ' new opps · ' + mtd.month + momStr;
   }
-
   // MoM% plugin for bar charts
   const momPlugin = {
     id: 'momLabels',
@@ -491,7 +498,6 @@ async function loadDashboard(owner) {
       ctx.restore();
     }
   };
-
   // Stage funnel (horizontal bar, centered)
   const stageData = (D.pipelineByStage || []); // Qualify → Negotiate top to bottom
   const maxVal = Math.max(...stageData.map(s => s.value));
@@ -538,7 +544,6 @@ async function loadDashboard(owner) {
       }
     }
   }));
-
   // Meetings chart (bar)
   const mData = D.meetingsPerMonth;
   chartInstances.push(new Chart(document.getElementById('meetingsChart'), {
@@ -554,7 +559,6 @@ async function loadDashboard(owner) {
       scales: { y: { beginAtZero: true, ticks: { stepSize: 5 } } }
     }
   }));
-
   // Growth chart (bar)
   const gData = D.pipelineGrowth;
   chartInstances.push(new Chart(document.getElementById('growthChart'), {
@@ -571,7 +575,6 @@ async function loadDashboard(owner) {
     }
   }));
 }
-
 // Initial load — Dashboard is the landing tab; the AI summary lazy-loads
 // only when the user opens the Action Center (it's a paid call).
 loadDashboard('');
