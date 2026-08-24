@@ -206,7 +206,7 @@ async function buildDashboardData(owner) {
     );
     // 4. Revenue from config (swap for Stripe later)
     const currentMonthRevenue = REVENUE.monthly.length ? REVENUE.monthly[REVENUE.monthly.length - 1].revenue : 0;
-    const ytdRevenue = 214033.71; // Hardcoded YTD gross revenue — update manually each month
+    const ytdRevenue = 261573.71; // Hardcoded YTD gross revenue — update manually each month
     const qbRevenuePromise = Promise.resolve({
       monthlyRevenue: REVENUE.monthly,
       ytdRevenue,
